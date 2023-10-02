@@ -68,6 +68,7 @@ param serverAppId string = ''
 @secure()
 param serverAppSecret string = ''
 param clientAppId string = ''
+param certificateKey string = ''
 
 @description('Id of the user or app to assign application roles')
 param principalId string = ''
@@ -129,6 +130,15 @@ module appServicePlan 'core/host/appserviceplan.bicep' = {
   }
 }
 
+// MS Graph Application Registration
+module registration 'appregistration.bicep' = {
+  name: 'registration'
+  scope: resourceGroup
+  params: {
+    certKey: certificateKey
+  }
+}
+
 // The application frontend
 module backend 'core/host/appservice.bicep' = {
   name: 'web'
@@ -143,6 +153,8 @@ module backend 'core/host/appservice.bicep' = {
     appCommandLine: 'python3 -m gunicorn main:app'
     scmDoBuildDuringDeployment: true
     managedIdentity: true
+    authClientId: useAuthentication ? registration.outputs.clientAppId : ''
+    authIssuerUri: useAuthentication ? '${environment().authentication.loginEndpoint}${tenant().tenantId}/v2.0' : ''
     appSettings: {
       AZURE_STORAGE_ACCOUNT: storage.outputs.name
       AZURE_STORAGE_CONTAINER: storageContainerName

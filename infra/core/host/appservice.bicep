@@ -34,6 +34,10 @@ param scmDoBuildDuringDeployment bool = false
 param use32BitWorkerProcess bool = false
 param ftpsState string = 'FtpsOnly'
 param healthCheckPath string = ''
+param authClientId string = ''
+param authIssuerUri string = ''
+@secure()
+param authCertificateThumbprint string = ''
 
 resource appService 'Microsoft.Web/sites@2022-03-01' = {
   name: name
@@ -86,6 +90,38 @@ resource appService 'Microsoft.Web/sites@2022-03-01' = {
     dependsOn: [
       configAppSettings
     ]
+  }
+
+  resource configAuth 'config' = if (!(empty(authClientId))) {
+    name: 'authsettingsV2'
+    properties: {
+      globalValidation: {
+        requireAuthentication: true
+        unauthenticatedClientAction: 'RedirectToLoginPage'
+        redirectToProvider: 'azureactivedirectory'
+      }
+      identityProviders: {
+        azureActiveDirectory: {
+          enabled: true
+          registration: {
+            clientId: authClientId
+            clientSecretSettingName: 'AZURE_AUTH_CLIENT_SECRET'
+            clientSecretCertificateThumbprint: authCertificateThumbprint
+            openIdIssuer: authIssuerUri
+          }
+          validation: {
+            defaultAuthorizationPolicy: {
+              allowedApplications: []
+            }
+          }
+        }
+      }
+      login: {
+        tokenStore: {
+          enabled: true
+        }
+      }
+    }
   }
 }
 
