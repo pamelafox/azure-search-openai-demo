@@ -109,12 +109,12 @@ resource createAddCertificate 'Microsoft.Resources/deploymentScripts@2020-10-01'
 
         Write-Host 'Certificate $certificateName in vault $vaultName is already present.'
 
-        $Secret = Get-AzKeyVaultSecret -VaultName $vaultName -Name $certificateName
+        $Secret = Get-AzKeyVaultSecret -VaultName $vaultName -Name $certificateName -AsPlainText
 
         $DeploymentScriptOutputs['certStart'] = $existingCert.notBefore
         $DeploymentScriptOutputs['certEnd'] = $existingCert.expires
         $DeploymentScriptOutputs['certThumbprint'] = $existingCert.Thumbprint
-        $DeploymentScriptOutputs['certKey'] = $Secret.SecretValueText
+        $DeploymentScriptOutputs['certKey'] = $Secret
         $existingCert | Out-String
       }
       else {
