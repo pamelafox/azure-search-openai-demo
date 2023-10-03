@@ -3,6 +3,7 @@ import 'microsoftGraph@1.0.0'
 @description('Specifies the name of the key vault.')
 param keyVaultName string
 param location string = resourceGroup().location
+param tags object = {}
 
 param principalId string
 
@@ -14,6 +15,7 @@ param keysPermissions array = [
 @description('Specifies the permissions to secrets in the vault. Valid values are: all, get, list, set, delete, backup, restore, recover, and purge.')
 param secretsPermissions array = [
   'list'
+  'get'
 ]
 
 @description('Specifies the ID of the user-assigned managed identity.')
@@ -38,6 +40,7 @@ resource webIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-3
 resource keyVault 'Microsoft.KeyVault/vaults@2021-06-01-preview' = {
   name: keyVaultName
   location: location
+  tags: tags
   properties: {
     //enabledForDeployment: enabledForDeployment
     //enabledForTemplateDeployment: enabledForTemplateDeployment
@@ -105,7 +108,13 @@ resource createAddCertificate 'Microsoft.Resources/deploymentScripts@2020-10-01'
       if ($existingCert -and $existingCert.Certificate.Subject -eq $subjectName) {
 
         Write-Host 'Certificate $certificateName in vault $vaultName is already present.'
+
+        $Secret = Get-AzKeyVaultSecret -VaultName $vaultName -Name $certificateName
+
+        $DeploymentScriptOutputs['certStart'] = $existingCert.notBefore
+        $DeploymentScriptOutputs['certEnd'] = $existingCert.expires
         $DeploymentScriptOutputs['certThumbprint'] = $existingCert.Thumbprint
+        $DeploymentScriptOutputs['certKey'] = $Secret.SecretValueText
         $existingCert | Out-String
       }
       else {
@@ -135,7 +144,12 @@ resource createAddCertificate 'Microsoft.Resources/deploymentScripts@2020-10-01'
           }
         } while ($operation.Status -ne 'completed')
 
+        $Secret = Get-AzKeyVaultSecret -VaultName $vaultName -Name $certificateName
+
+        $DeploymentScriptOutputs['certStart'] = $newCert.notBefore
+        $DeploymentScriptOutputs['certEnd'] = $newCert.expires
         $DeploymentScriptOutputs['certThumbprint'] = $newCert.Thumbprint
+        $DeploymentScriptOutputs['certKey'] = $Secret.SecretValueText
         $newCert | Out-String
       }
     '''
@@ -162,7 +176,9 @@ resource clientApp 'Microsoft.Graph/applications@beta' = {
       displayName: 'Example Client App Key Credential'
       usage: 'Verify'
       type: 'AsymmetricX509Cert'
-      key: 'bla'
+      key: createAddCertificate.properties.outputs.certKey
+      startDateTime: createAddCertificate.properties.outputs.certStart
+      endDateTime: createAddCertificate.properties.outputs.certEnd
     }
   ]
 }
@@ -173,3 +189,4 @@ resource clientSp 'Microsoft.Graph/servicePrincipals@beta' = {
 
 output clientAppId string = clientApp.appId
 output clientSpId string = clientSp.id
+output certThumbprint string = createAddCertificate.properties.outputs.certThumbprint
