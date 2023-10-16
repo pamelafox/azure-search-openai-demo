@@ -52,12 +52,9 @@ const Chat = () => {
             return new Promise(resolve => {
                 setTimeout(() => {
                     answer += newContent;
-                    const latestResponse: ChatAppResponse = { ...askResponse,
-                        choices: [{ ...askResponse.choices[0],
-                                    message: { content: answer,
-                                        role: askResponse.choices[0].message.role
-                                    } }
-                                ]
+                    const latestResponse: ChatAppResponse = {
+                        ...askResponse,
+                        choices: [{ ...askResponse.choices[0], message: { content: answer, role: askResponse.choices[0].message.role } }]
                     };
                     setStreamedAnswers([...answers, [question, latestResponse]]);
                     resolve(null);
@@ -78,12 +75,9 @@ const Chat = () => {
         } finally {
             setIsStreaming(false);
         }
-        const fullResponse: ChatAppResponse = { ...askResponse,
-            choices: [{ ...askResponse.choices[0],
-                        message: { content: answer,
-                            role: askResponse.choices[0].message.role
-                        } }
-                    ]
+        const fullResponse: ChatAppResponse = {
+            ...askResponse,
+            choices: [{ ...askResponse.choices[0], message: { content: answer, role: askResponse.choices[0].message.role } }]
         };
         return fullResponse;
     };
@@ -101,10 +95,10 @@ const Chat = () => {
         const token = client ? await getToken(client) : undefined;
 
         try {
-            const messages: ResponseMessage[] = answers.flatMap(a => ([
+            const messages: ResponseMessage[] = answers.flatMap(a => [
                 { content: a[0], role: "user" },
                 { content: a[1].choices[0].message.content, role: "bot" }
-            ]));
+            ]);
 
             const request: ChatAppRequest = {
                 messages: [...messages, { content: question, role: "user" }],
@@ -237,7 +231,7 @@ const Chat = () => {
                     {!lastQuestionRef.current ? (
                         <div className={styles.chatEmptyState}>
                             <SparkleFilled fontSize={"120px"} primaryFill={"rgba(115, 118, 225, 1)"} aria-hidden="true" aria-label="Chat logo" />
-                            <h1 className={styles.chatEmptyStateTitle}>Chat with your data</h1>
+                            <h1 className={styles.chatEmptyStateTitle}>Chat with Playwright docs</h1>
                             <h2 className={styles.chatEmptyStateSubtitle}>Ask anything or try an example</h2>
                             <ExampleList onExampleClicked={onExampleClicked} />
                         </div>
