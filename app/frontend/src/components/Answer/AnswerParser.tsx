@@ -27,7 +27,7 @@ export function parseAnswerToHtml(answer: string, isStreaming: boolean, onCitati
         parsedAnswer = truncatedAnswer;
     }
 
-    const parts = parsedAnswer.split(/\[([^\]]+)\]/g);
+    const parts = parsedAnswer.split(/\[\[([^\]]+)\]\]/g);
 
     const fragments: string[] = parts.map((part, index) => {
         if (index % 2 === 0) {
