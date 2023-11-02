@@ -43,7 +43,7 @@ param openAiResourceGroupName string = ''
     type: 'location'
   }
 })
-param openAiResourceGroupLocation string
+param openAiResourceGroupLocation string = 'eastus'
 
 param openAiSkuName string = 'S0'
 
