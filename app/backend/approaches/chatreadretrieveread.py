@@ -142,7 +142,6 @@ If you cannot generate a search query, return just the number 0.
             functions=functions,
             function_call="auto",
         )
-        print(chat_completion)
         query_text = self.get_search_query(chat_completion, original_user_query)
 
         # STEP 2: Retrieve relevant documents from the search index with the GPT optimized query
