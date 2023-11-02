@@ -276,6 +276,7 @@ module storage 'core/storage/storage-account.bicep' = {
 }
 
 // USER ROLES
+/*
 module openAiRoleUser 'core/security/role.bicep' = if (openAiHost == 'azure') {
   scope: openAiResourceGroup
   name: 'openai-role-user'
@@ -345,6 +346,7 @@ module searchSvcContribRoleUser 'core/security/role.bicep' = {
     principalType: 'User'
   }
 }
+*/
 
 // SYSTEM IDENTITIES
 module openAiRoleBackend 'core/security/role.bicep' = if (openAiHost == 'azure') {
