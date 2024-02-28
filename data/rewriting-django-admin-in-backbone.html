@@ -1,0 +1,3201 @@
+<!DOCTYPE html>
+<html class='v2' dir='ltr' xmlns='http://www.w3.org/1999/xhtml' xmlns:b='http://www.google.com/2005/gml/b' xmlns:data='http://www.google.com/2005/gml/data' xmlns:expr='http://www.google.com/2005/gml/expr'>
+<head>
+<link href='https://www.blogger.com/static/v1/widgets/3566091532-css_bundle_v2.css' rel='stylesheet' type='text/css'/>
+<meta content='IE=EmulateIE7' http-equiv='X-UA-Compatible'/>
+<link href="//google-code-prettify.googlecode.com/svn/trunk/src/prettify.css" rel="stylesheet" type="text/css">
+<script src="//google-code-prettify.googlecode.com/svn/trunk/src/prettify.js" type="text/javascript"></script>
+<meta content='width=1100' name='viewport'/>
+<meta content='text/html; charset=UTF-8' http-equiv='Content-Type'/>
+<meta content='blogger' name='generator'/>
+<link href='https://blog.pamelafox.org/favicon.ico' rel='icon' type='image/x-icon'/>
+<link href='http://blog.pamelafox.org/2013/07/rewriting-django-admin-in-backbone.html' rel='canonical'/>
+<link rel="alternate" type="application/atom+xml" title="pamela fox&#39;s blog - Atom" href="https://blog.pamelafox.org/feeds/posts/default" />
+<link rel="alternate" type="application/rss+xml" title="pamela fox&#39;s blog - RSS" href="https://blog.pamelafox.org/feeds/posts/default?alt=rss" />
+<link rel="service.post" type="application/atom+xml" title="pamela fox&#39;s blog - Atom" href="https://www.blogger.com/feeds/8501278254137514883/posts/default" />
+
+<link rel="alternate" type="application/atom+xml" title="pamela fox&#39;s blog - Atom" href="https://blog.pamelafox.org/feeds/6431703880654450220/comments/default" />
+<!--Can't find substitution for tag [blog.ieCssRetrofitLinks]-->
+<link href='http://rewriting-django-admin.appspot.com/images/whyweneedadmin.png' rel='image_src'/>
+<meta content='http://blog.pamelafox.org/2013/07/rewriting-django-admin-in-backbone.html' property='og:url'/>
+<meta content='Rewriting Django Admin in Backbone' property='og:title'/>
+<meta content=' Preamble:  This is an internal guide I wrote for Coursera about our site admin app, which is a Backbone &quot;port&quot; of Django admin. I&#39;ve snapsh...' property='og:description'/>
+<meta content='https://lh3.googleusercontent.com/blogger_img_proxy/AEn0k_vy5iPn1rAP-nYiF61fc3usJ8NACdotBdp5hFXWL6X7R1zYz_Bk0-_wMPSWe3Es6jNDhbvv-7QOXYb18o_cYxdPYrS1q8MIdE9KVmdEryz5kPRMuWxNSWT-syjCpp6mCTvuZAJRn0Q=w1200-h630-p-k-no-nu' property='og:image'/>
+<title>Rewriting Django Admin in Backbone</title>
+<style id='page-skin-1' type='text/css'><!--
+/*
+-----------------------------------------------
+Blogger Template Style
+Name:     Simple
+Designer: Josh Peterson
+URL:      www.noaesthetic.com
+----------------------------------------------- */
+/* Variable definitions
+====================
+<Variable name="keycolor" description="Main Color" type="color" default="#66bbdd"/>
+<Group description="Page Text" selector="body">
+<Variable name="body.font" description="Font" type="font"
+default="normal normal 12px Arial, Tahoma, Helvetica, FreeSans, sans-serif"/>
+<Variable name="body.text.color" description="Text Color" type="color" default="#222222"/>
+</Group>
+<Group description="Backgrounds" selector=".body-fauxcolumns-outer">
+<Variable name="body.background.color" description="Outer Background" type="color" default="#66bbdd"/>
+<Variable name="content.background.color" description="Main Background" type="color" default="#ffffff"/>
+<Variable name="header.background.color" description="Header Background" type="color" default="transparent"/>
+</Group>
+<Group description="Links" selector=".main-outer">
+<Variable name="link.color" description="Link Color" type="color" default="#2288bb"/>
+<Variable name="link.visited.color" description="Visited Color" type="color" default="#888888"/>
+<Variable name="link.hover.color" description="Hover Color" type="color" default="#33aaff"/>
+</Group>
+<Group description="Blog Title" selector=".header h1">
+<Variable name="header.font" description="Font" type="font"
+default="normal normal 60px Arial, Tahoma, Helvetica, FreeSans, sans-serif"/>
+<Variable name="header.text.color" description="Title Color" type="color" default="#3399bb" />
+</Group>
+<Group description="Blog Description" selector=".header .description">
+<Variable name="description.text.color" description="Description Color" type="color"
+default="#777777" />
+</Group>
+<Group description="Tabs Text" selector=".tabs-inner .widget li a">
+<Variable name="tabs.font" description="Font" type="font"
+default="normal normal 14px Arial, Tahoma, Helvetica, FreeSans, sans-serif"/>
+<Variable name="tabs.text.color" description="Text Color" type="color" default="#999999"/>
+<Variable name="tabs.selected.text.color" description="Selected Color" type="color" default="#000000"/>
+</Group>
+<Group description="Tabs Background" selector=".tabs-outer .PageList">
+<Variable name="tabs.background.color" description="Background Color" type="color" default="#f5f5f5"/>
+<Variable name="tabs.selected.background.color" description="Selected Color" type="color" default="#eeeeee"/>
+</Group>
+<Group description="Post Title" selector="h3.post-title, .comments h4">
+<Variable name="post.title.font" description="Font" type="font"
+default="normal normal 22px Arial, Tahoma, Helvetica, FreeSans, sans-serif"/>
+</Group>
+<Group description="Date Header" selector=".date-header">
+<Variable name="date.header.color" description="Text Color" type="color"
+default="#242424"/>
+<Variable name="date.header.background.color" description="Background Color" type="color"
+default="transparent"/>
+</Group>
+<Group description="Post Footer" selector=".post-footer">
+<Variable name="post.footer.text.color" description="Text Color" type="color" default="#666666"/>
+<Variable name="post.footer.background.color" description="Background Color" type="color"
+default="#f9f9f9"/>
+<Variable name="post.footer.border.color" description="Shadow Color" type="color" default="#eeeeee"/>
+</Group>
+<Group description="Gadgets" selector="h2">
+<Variable name="widget.title.font" description="Title Font" type="font"
+default="normal bold 11px Arial, Tahoma, Helvetica, FreeSans, sans-serif"/>
+<Variable name="widget.title.text.color" description="Title Color" type="color" default="#000000"/>
+<Variable name="widget.alternate.text.color" description="Alternate Color" type="color" default="#999999"/>
+</Group>
+<Group description="Images" selector=".main-inner">
+<Variable name="image.background.color" description="Background Color" type="color" default="#ffffff"/>
+<Variable name="image.border.color" description="Border Color" type="color" default="#bbb"/>
+<Variable name="image.text.color" description="Caption Text Color" type="color" default="#242424"/>
+</Group>
+<Group description="Accents" selector=".content-inner">
+<Variable name="body.rule.color" description="Separator Line Color" type="color" default="#eeeeee"/>
+<Variable name="tabs.border.color" description="Tabs Border Color" type="color" default="transparent"/>
+</Group>
+<Variable name="body.background" description="Body Background" type="background"
+color="#bef56e" default="$(color) none repeat scroll top left"/>
+<Variable name="body.background.override" description="Body Background Override" type="string" default=""/>
+<Variable name="body.background.gradient.cap" description="Body Gradient Cap" type="url"
+default="url(http://www.blogblog.com/1kt/simple/gradients_light.png)"/>
+<Variable name="body.background.gradient.tile" description="Body Gradient Tile" type="url"
+default="url(http://www.blogblog.com/1kt/simple/body_gradient_tile_light.png)"/>
+<Variable name="content.background.color.selector" description="Content Background Color Selector" type="string" default=".content-inner"/>
+<Variable name="content.padding" description="Content Padding" type="length" default="10px"/>
+<Variable name="content.padding.horizontal" description="Content Horizontal Padding" type="length" default="10px"/>
+<Variable name="content.shadow.spread" description="Content Shadow Spread" type="length" default="40px"/>
+<Variable name="content.shadow.spread.webkit" description="Content Shadow Spread (WebKit)" type="length" default="5px"/>
+<Variable name="content.shadow.spread.ie" description="Content Shadow Spread (IE)" type="length" default="10px"/>
+<Variable name="main.border.width" description="Main Border Width" type="length" default="0"/>
+<Variable name="header.background.gradient" description="Header Gradient" type="url" default="none"/>
+<Variable name="header.shadow.offset.left" description="Header Shadow Offset Left" type="length" default="-1px"/>
+<Variable name="header.shadow.offset.top" description="Header Shadow Offset Top" type="length" default="-1px"/>
+<Variable name="header.shadow.spread" description="Header Shadow Spread" type="length" default="1px"/>
+<Variable name="header.padding" description="Header Padding" type="length" default="30px"/>
+<Variable name="header.border.size" description="Header Border Size" type="length" default="1px"/>
+<Variable name="header.bottom.border.size" description="Header Bottom Border Size" type="length" default="1px"/>
+<Variable name="header.border.horizontalsize" description="Header Horizontal Border Size" type="length" default="0"/>
+<Variable name="description.text.size" description="Description Text Size" type="string" default="140%"/>
+<Variable name="tabs.margin.top" description="Tabs Margin Top" type="length" default="0" />
+<Variable name="tabs.margin.side" description="Tabs Side Margin" type="length" default="30px" />
+<Variable name="tabs.background.gradient" description="Tabs Background Gradient" type="url"
+default="url(http://www.blogblog.com/1kt/simple/gradients_light.png)"/>
+<Variable name="tabs.border.width" description="Tabs Border Width" type="length" default="1px"/>
+<Variable name="tabs.bevel.border.width" description="Tabs Bevel Border Width" type="length" default="1px"/>
+<Variable name="date.header.padding" description="Date Header Padding" type="string" default="inherit"/>
+<Variable name="date.header.letterspacing" description="Date Header Letter Spacing" type="string" default="inherit"/>
+<Variable name="date.header.margin" description="Date Header Margin" type="string" default="inherit"/>
+<Variable name="post.margin.bottom" description="Post Bottom Margin" type="length" default="25px"/>
+<Variable name="image.border.small.size" description="Image Border Small Size" type="length" default="2px"/>
+<Variable name="image.border.large.size" description="Image Border Large Size" type="length" default="5px"/>
+<Variable name="page.width.selector" description="Page Width Selector" type="string" default=".region-inner"/>
+<Variable name="page.width" description="Page Width" type="string" default="auto"/>
+<Variable name="main.section.margin" description="Main Section Margin" type="length" default="15px"/>
+<Variable name="main.padding" description="Main Padding" type="length" default="15px"/>
+<Variable name="main.padding.top" description="Main Padding Top" type="length" default="30px"/>
+<Variable name="main.padding.bottom" description="Main Padding Bottom" type="length" default="30px"/>
+<Variable name="paging.background"
+color="#ffffff"
+description="Background of blog paging area" type="background"
+default="transparent none no-repeat scroll top center"/>
+<Variable name="footer.bevel" description="Bevel border length of footer" type="length" default="0"/>
+<Variable name="startSide" description="Side where text starts in blog language" type="automatic" default="left"/>
+<Variable name="endSide" description="Side where text ends in blog language" type="automatic" default="right"/>
+*/
+/* Content
+----------------------------------------------- */
+body, .body-fauxcolumn-outer {
+font: normal normal 12px Arial, Tahoma, Helvetica, FreeSans, sans-serif;;
+color: #242424;
+background: #bef56e none repeat scroll top left;
+padding: 0 0 0 0;
+}
+html body .region-inner {
+min-width: 0;
+max-width: 100%;
+width: auto;
+}
+a:link {
+text-decoration:none;
+}
+a:visited {
+text-decoration:none;
+}
+a:hover {
+text-decoration:underline;
+}
+.body-fauxcolumn-outer .fauxcolumn-inner {
+background: transparent none repeat scroll top left;
+_background-image: none;
+}
+.body-fauxcolumn-outer .cap-top {
+position: absolute;
+z-index: 1;
+height: 400px;
+width: 100%;
+background: #bef56e none repeat scroll top left;
+}
+.body-fauxcolumn-outer .cap-top .cap-left {
+width: 100%;
+background: transparent none repeat-x scroll top left;
+_background-image: none;
+}
+.content-outer {
+-moz-box-shadow: 0 0 0 rgba(0, 0, 0, .15);
+-webkit-box-shadow: 0 0 0 rgba(0, 0, 0, .15);
+-goog-ms-box-shadow: 0 0 0 #333333;
+box-shadow: 0 0 0 rgba(0, 0, 0, .15);
+margin-bottom: 1px;
+}
+.content-inner {
+padding: 10px 40px;
+}
+.content-inner {
+background-color: #ffffff;
+}
+/* Header
+----------------------------------------------- */
+.header-outer {
+background: transparent none repeat-x scroll 0 -400px;
+_background-image: none;
+}
+.Header h1 {
+font: normal normal 40px 'Trebuchet MS',Trebuchet,Verdana,sans-serif;
+color: #000000;
+text-shadow: 0 0 0 rgba(0, 0, 0, .2);
+}
+.Header h1 a {
+color: #000000;
+}
+.Header .description {
+font-size: 18px;
+color: #000000;
+}
+.header-inner .Header .titlewrapper {
+padding: 22px 0;
+}
+.header-inner .Header .descriptionwrapper {
+padding: 0 0;
+}
+/* Tabs
+----------------------------------------------- */
+.tabs-inner .section:first-child {
+border-top: 0 solid #dddddd;
+}
+.tabs-inner .section:first-child ul {
+margin-top: -1px;
+border-top: 1px solid #dddddd;
+border-left: 1px solid #dddddd;
+border-right: 1px solid #dddddd;
+}
+.tabs-inner .widget ul {
+background: transparent none repeat-x scroll 0 -800px;
+_background-image: none;
+border-bottom: 1px solid #dddddd;
+margin-top: 0;
+margin-left: -30px;
+margin-right: -30px;
+}
+.tabs-inner .widget li a {
+display: inline-block;
+padding: .6em 1em;
+font: normal normal 12px Arial, Tahoma, Helvetica, FreeSans, sans-serif;;
+color: #000000;
+border-left: 1px solid #ffffff;
+border-right: 1px solid #dddddd;
+}
+.tabs-inner .widget li:first-child a {
+border-left: none;
+}
+.tabs-inner .widget li.selected a, .tabs-inner .widget li a:hover {
+color: #000000;
+background-color: #888888;
+text-decoration: none;
+}
+/* Columns
+----------------------------------------------- */
+.main-outer {
+border-top: 0 solid transparent;
+}
+.fauxcolumn-left-outer .fauxcolumn-inner {
+border-right: 1px solid transparent;
+}
+.fauxcolumn-right-outer .fauxcolumn-inner {
+border-left: 1px solid transparent;
+}
+/* Headings
+----------------------------------------------- */
+.sidebar h2 {
+margin: 0 0 1em 0;
+font: normal bold 11px 'Trebuchet MS',Trebuchet,Verdana,sans-serif;
+color: #000000;
+text-transform: uppercase;
+}
+/* Widgets
+----------------------------------------------- */
+.widget .zippy {
+color: #999999;
+text-shadow: 2px 2px 1px rgba(0, 0, 0, .1);
+}
+.widget .popular-posts ul {
+list-style: none;
+}
+/* Posts
+----------------------------------------------- */
+.date-header span {
+background-color: #8bea00;
+color: #000000;
+padding: 0.4em;
+letter-spacing: 3px;
+margin: inherit;
+}
+.main-inner {
+padding-top: 35px;
+padding-bottom: 65px;
+}
+.main-inner .column-center-inner {
+padding: 0 0;
+}
+.main-inner .column-center-inner .section {
+margin: 0 1em;
+}
+.post {
+margin: 0 0 45px 0;
+}
+h3.post-title, .comments h4 {
+font: normal normal 22px 'Trebuchet MS',Trebuchet,Verdana,sans-serif;
+margin: .75em 0 0;
+}
+.post-body {
+font-size: 110%;
+line-height: 1.4;
+position: relative;
+}
+pre.prettyprint {
+overflow: auto;
+}
+.post-body img, .post-body .tr-caption-container, .Profile img, .Image img,
+.BlogList .item-thumbnail img {
+padding: 2px;
+background: #ffffff;
+border: 1px solid #bbbbbb;
+-moz-box-shadow: 1px 1px 5px rgba(0, 0, 0, .1);
+-webkit-box-shadow: 1px 1px 5px rgba(0, 0, 0, .1);
+box-shadow: 1px 1px 5px rgba(0, 0, 0, .1);
+}
+.post-body img, .post-body .tr-caption-container {
+padding: 5px;
+}
+.post-body .tr-caption-container {
+color: #666666;
+}
+.post-body .tr-caption-container img {
+padding: 0;
+background: transparent;
+border: none;
+-moz-box-shadow: 0 0 0 rgba(0, 0, 0, .1);
+-webkit-box-shadow: 0 0 0 rgba(0, 0, 0, .1);
+box-shadow: 0 0 0 rgba(0, 0, 0, .1);
+}
+.post-header {
+margin: 0 0 1.5em;
+line-height: 1.6;
+font-size: 90%;
+}
+.post-footer {
+margin: 20px -2px 0;
+padding: 5px 10px;
+color: #666666;
+background-color: #eeeeee;
+border-bottom: 1px solid #eeeeee;
+line-height: 1.6;
+font-size: 90%;
+}
+#comments .comment-author {
+padding-top: 1.5em;
+border-top: 1px solid transparent;
+background-position: 0 1.5em;
+}
+#comments .comment-author:first-child {
+padding-top: 0;
+border-top: none;
+}
+.avatar-image-container {
+margin: .2em 0 0;
+}
+#comments .avatar-image-container img {
+border: 1px solid #bbbbbb;
+}
+/* Accents
+---------------------------------------------- */
+.section-columns td.columns-cell {
+border-left: 1px solid transparent;
+}
+.blog-pager {
+background: transparent url(//www.blogblog.com/1kt/simple/paging_dot.png) repeat-x scroll top center;
+}
+.blog-pager-older-link, .home-link,
+.blog-pager-newer-link {
+background-color: #ffffff;
+padding: 5px;
+}
+.footer-outer {
+border-top: 1px dashed #bbbbbb;
+}
+/* Mobile
+----------------------------------------------- */
+body.mobile  {
+padding: 0;
+}
+.mobile .content-inner {
+padding: 0;
+}
+.mobile .content-outer {
+-webkit-box-shadow: 0 0 3px rgba(0, 0, 0, .15);
+box-shadow: 0 0 3px rgba(0, 0, 0, .15);
+padding: 0 0;
+}
+body.mobile .AdSense {
+margin-left: -0;
+}
+.mobile .tabs-inner .widget ul {
+margin-left: 0;
+margin-right: 0;
+}
+.mobile .post {
+margin: 0;
+}
+.mobile .main-inner .column-center-inner .section {
+margin: 0;
+}
+.mobile .main-inner {
+padding-top: 20px;
+padding-bottom: 20px;
+}
+.mobile .main-inner .column-center-inner {
+padding: 0;
+}
+.mobile .date-header span {
+padding: 0.4em 10px;
+margin: 0 -10px;
+}
+.mobile h3.post-title {
+margin: 0;
+}
+.mobile .blog-pager {
+background: transparent;
+}
+.mobile .footer-outer {
+border-top: none;
+}
+.mobile .main-inner, .mobile .footer-inner {
+background-color: #ffffff;
+}
+.mobile-link-button {
+background-color: #2288bb;
+}
+.mobile-link-button a:link, .mobile-link-button a:visited {
+color: #ffffff;
+}
+
+--></style>
+<style id='template-skin-1' type='text/css'><!--
+body {
+min-width: 930px;
+}
+.content-outer, .content-fauxcolumn-outer, .region-inner {
+min-width: 930px;
+max-width: 930px;
+_width: 930px;
+}
+.main-inner .columns {
+padding-left: 0;
+padding-right: 200px;
+}
+.main-inner .fauxcolumn-center-outer {
+left: 0;
+right: 200px;
+/* IE6 does not respect left and right together */
+_width: expression(this.parentNode.offsetWidth -
+parseInt("0") -
+parseInt("200px") + 'px');
+}
+.main-inner .fauxcolumn-left-outer {
+width: 0;
+}
+.main-inner .fauxcolumn-right-outer {
+width: 200px;
+}
+.main-inner .column-left-outer {
+width: 0;
+right: 100%;
+margin-left: -0;
+}
+.main-inner .column-right-outer {
+width: 200px;
+margin-right: -200px;
+}
+#layout {
+min-width: 0;
+}
+#layout .content-outer {
+min-width: 0;
+width: 800px;
+}
+#layout .region-inner {
+min-width: 0;
+width: auto;
+}
+--></style>
+<link href='https://www.blogger.com/dyn-css/authorization.css?targetBlogID=8501278254137514883&amp;zx=a699fae1-f746-4908-927f-9c202d629fcc' media='none' onload='if(media!=&#39;all&#39;)media=&#39;all&#39;' rel='stylesheet'/><noscript><link href='https://www.blogger.com/dyn-css/authorization.css?targetBlogID=8501278254137514883&amp;zx=a699fae1-f746-4908-927f-9c202d629fcc' rel='stylesheet'/></noscript>
+<meta name='google-adsense-platform-account' content='ca-host-pub-1556223355139109'/>
+<meta name='google-adsense-platform-domain' content='blogspot.com'/>
+
+</head>
+<body class='loading'>
+<div class='navbar section' id='navbar'><div class='widget Navbar' data-version='1' id='Navbar1'><script type="text/javascript">
+    function setAttributeOnload(object, attribute, val) {
+      if(window.addEventListener) {
+        window.addEventListener('load',
+          function(){ object[attribute] = val; }, false);
+      } else {
+        window.attachEvent('onload', function(){ object[attribute] = val; });
+      }
+    }
+  </script>
+<div id="navbar-iframe-container"></div>
+<script type="text/javascript" src="https://apis.google.com/js/platform.js"></script>
+<script type="text/javascript">
+      gapi.load("gapi.iframes:gapi.iframes.style.bubble", function() {
+        if (gapi.iframes && gapi.iframes.getContext) {
+          gapi.iframes.getContext().openChild({
+              url: 'https://www.blogger.com/navbar.g?targetBlogID\x3d8501278254137514883\x26blogName\x3dpamela+fox\x27s+blog\x26publishMode\x3dPUBLISH_MODE_HOSTED\x26navbarType\x3dLIGHT\x26layoutType\x3dLAYOUTS\x26searchRoot\x3dhttps://blog.pamelafox.org/search\x26blogLocale\x3den\x26v\x3d2\x26homepageUrl\x3dhttps://blog.pamelafox.org/\x26targetPostID\x3d6431703880654450220\x26blogPostOrPageUrl\x3dhttps://blog.pamelafox.org/2013/07/rewriting-django-admin-in-backbone.html\x26vt\x3d-2449310501042165043',
+              where: document.getElementById("navbar-iframe-container"),
+              id: "navbar-iframe"
+          });
+        }
+      });
+    </script><script type="text/javascript">
+(function() {
+var script = document.createElement('script');
+script.type = 'text/javascript';
+script.src = '//pagead2.googlesyndication.com/pagead/js/google_top_exp.js';
+var head = document.getElementsByTagName('head')[0];
+if (head) {
+head.appendChild(script);
+}})();
+</script>
+</div></div>
+<div class='body-fauxcolumns'>
+<div class='fauxcolumn-outer body-fauxcolumn-outer'>
+<div class='cap-top'>
+<div class='cap-left'></div>
+<div class='cap-right'></div>
+</div>
+<div class='fauxborder-left'>
+<div class='fauxborder-right'></div>
+<div class='fauxcolumn-inner'>
+</div>
+</div>
+<div class='cap-bottom'>
+<div class='cap-left'></div>
+<div class='cap-right'></div>
+</div>
+</div>
+</div>
+<div class='content'>
+<div class='content-fauxcolumns'>
+<div class='fauxcolumn-outer content-fauxcolumn-outer'>
+<div class='cap-top'>
+<div class='cap-left'></div>
+<div class='cap-right'></div>
+</div>
+<div class='fauxborder-left'>
+<div class='fauxborder-right'></div>
+<div class='fauxcolumn-inner'>
+</div>
+</div>
+<div class='cap-bottom'>
+<div class='cap-left'></div>
+<div class='cap-right'></div>
+</div>
+</div>
+</div>
+<div class='content-outer'>
+<div class='content-cap-top cap-top'>
+<div class='cap-left'></div>
+<div class='cap-right'></div>
+</div>
+<div class='fauxborder-left content-fauxborder-left'>
+<div class='fauxborder-right content-fauxborder-right'></div>
+<div class='content-inner'>
+<header>
+<div class='header-outer'>
+<div class='header-cap-top cap-top'>
+<div class='cap-left'></div>
+<div class='cap-right'></div>
+</div>
+<div class='fauxborder-left header-fauxborder-left'>
+<div class='fauxborder-right header-fauxborder-right'></div>
+<div class='region-inner header-inner'>
+<div class='header section' id='header'><div class='widget Header' data-version='1' id='Header1'>
+<div id='header-inner'>
+<div class='titlewrapper'>
+<h1 class='title'>
+<a href='https://blog.pamelafox.org/'>
+pamela fox's blog
+</a>
+</h1>
+</div>
+<div class='descriptionwrapper'>
+<p class='description'><span>
+</span></p>
+</div>
+</div>
+</div></div>
+</div>
+</div>
+<div class='header-cap-bottom cap-bottom'>
+<div class='cap-left'></div>
+<div class='cap-right'></div>
+</div>
+</div>
+</header>
+<div class='tabs-outer'>
+<div class='tabs-cap-top cap-top'>
+<div class='cap-left'></div>
+<div class='cap-right'></div>
+</div>
+<div class='fauxborder-left tabs-fauxborder-left'>
+<div class='fauxborder-right tabs-fauxborder-right'></div>
+<div class='region-inner tabs-inner'>
+<div class='tabs no-items section' id='crosscol'></div>
+<div class='tabs no-items section' id='crosscol-overflow'></div>
+</div>
+</div>
+<div class='tabs-cap-bottom cap-bottom'>
+<div class='cap-left'></div>
+<div class='cap-right'></div>
+</div>
+</div>
+<div class='main-outer'>
+<div class='main-cap-top cap-top'>
+<div class='cap-left'></div>
+<div class='cap-right'></div>
+</div>
+<div class='fauxborder-left main-fauxborder-left'>
+<div class='fauxborder-right main-fauxborder-right'></div>
+<div class='region-inner main-inner'>
+<div class='columns fauxcolumns'>
+<div class='fauxcolumn-outer fauxcolumn-center-outer'>
+<div class='cap-top'>
+<div class='cap-left'></div>
+<div class='cap-right'></div>
+</div>
+<div class='fauxborder-left'>
+<div class='fauxborder-right'></div>
+<div class='fauxcolumn-inner'>
+</div>
+</div>
+<div class='cap-bottom'>
+<div class='cap-left'></div>
+<div class='cap-right'></div>
+</div>
+</div>
+<div class='fauxcolumn-outer fauxcolumn-left-outer'>
+<div class='cap-top'>
+<div class='cap-left'></div>
+<div class='cap-right'></div>
+</div>
+<div class='fauxborder-left'>
+<div class='fauxborder-right'></div>
+<div class='fauxcolumn-inner'>
+</div>
+</div>
+<div class='cap-bottom'>
+<div class='cap-left'></div>
+<div class='cap-right'></div>
+</div>
+</div>
+<div class='fauxcolumn-outer fauxcolumn-right-outer'>
+<div class='cap-top'>
+<div class='cap-left'></div>
+<div class='cap-right'></div>
+</div>
+<div class='fauxborder-left'>
+<div class='fauxborder-right'></div>
+<div class='fauxcolumn-inner'>
+</div>
+</div>
+<div class='cap-bottom'>
+<div class='cap-left'></div>
+<div class='cap-right'></div>
+</div>
+</div>
+<!-- corrects IE6 width calculation -->
+<div class='columns-inner'>
+<div class='column-center-outer'>
+<div class='column-center-inner'>
+<div class='main section' id='main'><div class='widget Blog' data-version='1' id='Blog1'>
+<div class='blog-posts hfeed'>
+
+          <div class="date-outer">
+
+<h2 class='date-header'><span>Saturday, July 27, 2013</span></h2>
+
+          <div class="date-posts">
+
+<div class='post-outer'>
+<div class='post hentry'>
+<a name='6431703880654450220'></a>
+<h3 class='post-title entry-title'>
+Rewriting Django Admin in Backbone
+</h3>
+<div class='post-header'>
+<div class='post-header-line-1'></div>
+</div>
+<div class='post-body entry-content' id='post-body-6431703880654450220'>
+<div style="background:#eee;padding-left:8px; padding-right:8px;">
+<strong>Preamble:</strong><br>
+<p>This is an internal guide I wrote for Coursera about our site admin app, which is a Backbone "port" of Django admin. I've snapshotted it here in case it's interesting to other folks that are using Django admin and going down the same route, or just generally thinking about making an admin interface in Backbone.
+</p>
+</div>
+
+<div id="siteadmin-generated-toc"></div>
+
+ <h2>A Bit of History</h2>
+
+  <p>When Coursera first began advertising courses on <code>www.coursera.org</code>, the process to add a new course was quite manual: our Course Ops team would work with the university admins to draft up HTML describing the course, engineers would paste that HTML into the DB, and make edits to it as requested. Or, that's how the lore goes.</p>
+
+  <p>Here's how that data might look on the site:</p>
+  <img src="https://lh3.googleusercontent.com/blogger_img_proxy/AEn0k_vy5iPn1rAP-nYiF61fc3usJ8NACdotBdp5hFXWL6X7R1zYz_Bk0-_wMPSWe3Es6jNDhbvv-7QOXYb18o_cYxdPYrS1q8MIdE9KVmdEryz5kPRMuWxNSWT-syjCpp6mCTvuZAJRn0Q=s0-d" style="width:500px;">
+
+  <p>As you can imagine, that process doesn't scale: it took unnecessary engineering honors to make incremental edits to the course descriptions, and it did not please university admins to have to wait on such a slow cycle. Ideally, they could log in, edit the description, and see the changes live, within a matter of minutes.</p>
+
+  <p><img src="https://lh3.googleusercontent.com/blogger_img_proxy/AEn0k_vvQTFv1tGPwar1Dvs1WE94BlE3ULHg9OtEDyL5LtspyIBY8_VPMW_ySO_C0KNX7XqqaV6VMla_PbwCg-LgZ0WH8Q3_6cC6sUDghwWvtyA3Bx4YqFqGbQnuMa7E4UizJA=s0-d" style="float:right;width:100px; margin:6px;"> So we set about making an admin interface for the data. Since <code>www.coursera.org</code> runs off a Python/Django/MySQL backend, we first went down the expected route: <a href="https://docs.djangoproject.com/en/dev/ref/contrib/admin/">Django Admin</a>, an app that's built into Django for easy editing of database tables, complete with different permission levels, edit logs, and an extensibility mechanism.
+  </p>
+  <p style="clear:right;">Here's what it looked like on our data:<br>
+  <img src="https://lh3.googleusercontent.com/blogger_img_proxy/AEn0k_uz_TYpGHraSx2B0FyGXAuI03LnPmxzPeLbsYmQzf2Qu9mcT6P-pEaMc0z2aK0GfuO8hpbnKhs4B-ttvXykXAiLIpUsEiu7VlsgZCGaGQFJyA0vYmJVtd9LAxJx6wwBgDHlhgU=s0-d" style="width:500px;">
+  </p>
+
+<p>Django Admin was easy to set up and skin, but when we started implementing requests from Course Ops to improve the editing experience and workflow, we found we had to fight against Django Admin, to hack into its core in ways that felt wrong. We wanted a lot of different ways of editing data, which we could do via custom Django Admin widgets, but that often meant writing HTML and JavaScript into our Python code itself. We also wanted different buttons in our forms depending on the state of the model, like "open a session", and to do that, we had to modify the base templates with hacky HTML and javascript.
+  </p>
+  <p>You can see a few of our widgets and buttons here:</p>
+  <img src="https://lh3.googleusercontent.com/blogger_img_proxy/AEn0k_uYbrATxiqm188MZf9r2m85V7MfTJ2nck_5l5GjCL7_wxLZGhSM8OPRMGF84SswFmA8Qk6b1KWAlpVtpqXe5BpzGjNDX6_QoxATxcwounb9M4pQC3w4dJjjQB0gJIypH6BDLEohb9Gc=s0-d" style="width:500px;">
+  <p>
+We were making it work, sure, but I wasn't sure how long we could keep making it work, and if I could bring myself to look at the codebase later, knowing how we'd contorted it to meet our needs. Once I realized that I was the likely engineer to be making bug fixes and implementing feature requests, I decided it was time to move away, fast, before we got too deep into it.
+  </p>
+
+  <h2>Site Admin</h2>
+  <p>So, over the course of the 3-day Labor Day weekend, I wrote "site admin", an admin interface that used our new approach to writing frontends, with a Backbone frontend and a RESTful Django API. It wasn't feature-complete with Django admin after those 3 days (and it still isn't), but it was built to be extendible on the client-side in a way that Django Admin was not, and that has made it much easier to build on.</p>
+
+  <p>Let's walk through the API and the frontend. <br>
+  <img src="https://lh3.googleusercontent.com/blogger_img_proxy/AEn0k_ssxMcT56lVRD5mU5AF3UHsK3nthJ1Gw5IaehY0n60NjGDR84zE3VN8Q0a1lTs0hBBTiSG9w6G9mgVh2j4J3ytgktN-vM7yR7isA3136t5h-QK9-n6UWDnoTCLMwP70eZlIgGI=s0-d" style="width:500px;">
+  </p>
+
+  <h3>The API</h3>
+
+  <p>The site admin API is designed to be exactly the sort of API that Backbone expects, a RESTful JSON API. It's based off an open-source project called <a href="https://github.com/af/djangbone">Djangbone</a>, but is now heavily modified.
+  </p>
+  <p>
+    In <code>admin_api/views.py</code>, the <code>RestrictedAdminAPIView</code> extends the generic Django <code>View</code> class, and defines get/post/put/delete methods that respond to the appropriate HTTP verb and understand how to generically fetch/create/edit/delete any model/collection. That file also contains <code>AdminLogsView</code>, which handles creation and retrieval of edit logs, and <code>AdminSearchView</code>, which is used by autocompletes in the frontend for finding models.
+  </p>
+
+  <p>To set up an API for a particular set of models, we'd follow these steps, using the <code>categories</code> app and <code>Category</code> model as an example:</p>
+  <ul>
+    <li><strong>Update <code>categories/models.py</code></strong>: We add a static method to a Model class that returns back all of the models that the given user is allowed to administer.
+<pre class="prettyprint">
+class Category(models.Model):
+    @staticmethod
+    def objects_administerd_by_user(user):
+        if user.is_superuser:
+            return Category.objects.all()
+        else:
+          return Category.objects.none()
+</pre>
+
+      <li><strong>Create <code>categories/admin_api.py</code></strong>: In it, we create a new view that extends <code>RestrictedAdminAPIView</code>, where we specify the <code>base_queryset</code> and <code>base_model</code>, corresponding to our <code>Model</code>, and we provide a list of fields that should be serialized into the JSON (we do not want to pass down all fields, particularly in the case of models with related fields, like course students). We also define <code>get_add_form</code> and <code>get_edit_form</code>, which return a Django <code>Form</code> subclass based on the request. We often serve different forms to different users, like when we want looser field validation for super users versus university admins.
+
+<pre class="prettyprint">CATEGORY_FIELDS = (
+                  'name',
+                  'description',
+                  )
+
+
+class CategoryAdminAPIView(RestrictedAdminAPIView):
+    base_queryset = Category.objects.all()
+    base_model = Category
+
+    serialize_fields = CATEGORY_FIELDS + ('id', 'short_name')
+
+    def get_add_form(self, request):
+        if request.user.is_superuser:
+            return NewCategoryAdminAPIForm
+        else:
+            return None
+
+    def get_edit_form(self, request):
+        if request.user.is_superuser:
+            return EditCategoryAdminAPIForm
+        else:
+            return None
+
+
+class EditCategoryAdminAPIForm(AdminAPIForm):
+
+    protected_fields = [
+                        'name',
+                        'short_name',
+                        ]
+
+    class Meta:
+        model = Category
+        fields = CATEGORY_FIELDS
+
+    def clean(self):
+        cleaned_data = super(EditCategoryAdminAPIForm, self).clean()
+        short_name = cleaned_data.get('short_name')
+        if short_name is not None and len(short_name) > 20:
+            err = 'Please limit to 20 chars (currently %d).' % (
+                len(short_name))
+            self._errors['short_name'] = self.error_class([err])
+            del cleaned_data['short_name']
+        if short_name is not None and not re.match('^[a-z0-9-\.]+$', short_name):
+            self._errors['short_name'] = \
+                self.error_class(['Please limit to a-z,0-9.'])
+            del cleaned_data["short_name"]
+        name = cleaned_data.get('name')
+        if name is not None and len(name) > 60:
+            err = 'Please limit to 60 chars (currently %d).' % (
+                len(name))
+            self._errors['name'] = self.error_class([err])
+            del cleaned_data['name']
+        return cleaned_data
+
+
+class NewCategoryAdminAPIForm(EditCategoryAdminAPIForm):
+
+    class Meta:
+        model = Category
+        fields = CATEGORY_FIELDS + ('short_name',)
+</pre>
+
+        <li><strong>Update <code>admin_api/urls.py</code></strong>: We add 2 URL patterns for this model's API, to handle the model and collection verbs:
+   <pre class="prettyprint">
+url(r'^categories$',
+  CategoryAdminAPIView.as_view(),
+  name="api_categories"),
+url(r'^categories/(?P<id>\d+)',
+  CategoryAdminAPIView.as_view(),
+  name="api_category"),
+    </pre>
+<li><strong>Update <code>admin_api/tests.py</code></strong>: We add tests for the API, checking permissions and validation.
+<pre class="prettyprint">
+   def test_create_category(self):
+    client = Client()
+
+    cats_url = reverse('api_categories')
+
+    # Test: super-user can create category
+    create_and_login_as_superuser(client)
+    data = {
+        'name': 'Fake Category',
+        'short_name': 'fake-cat',
+    }
+    response = self.post_json(client, cats_url, data)
+    response_json = simplejson.loads(response.content)
+    self.assertEqual(response.status_code, 200)
+    self.assertEqual(response_json['name'], data['name'])
+    self.assertEqual(response_json['short_name'], data['short_name'])
+
+    # Test: cant edit short name after its created
+    cat_url = reverse('api_category', args=[response_json['id']])
+    data['short_name'] = 'fakecat2'
+    response = self.put_json(client, cat_url, data)
+    response_json = simplejson.loads(response.content)
+    self.assertEqual(response.status_code, 200)
+    self.assertEqual(response_json['short_name'], 'fake-cat')
+
+    # Test: Cant use a shitty short name
+    data['short_name'] = 'SoGreat OMG'
+    response = self.post_json(client, cats_url, data)
+    response_json = simplejson.loads(response.content)
+    self.assertEqual(response.status_code, 400)
+    self.assertEqual(response_json['short_name'],
+        ['Please limit to a-z,0-9.'])
+
+    # Test: instructors cant create categories
+    create_and_login_as_instructor(client)
+    response = self.post_json(client, cats_url, data)
+    self.assertEqual(response.status_code, 400)
+</pre>
+
+</ul>
+
+
+<h3>The Frontend</h3>
+
+<p>The site admin frontend is designed in a similar way as the backend: generic views that understand models and collections generally, with ways to specify the differences for each model.
+</p>
+<p><code>ModelAdminPageView</code> is responsible for creating a page with a header, banner, and then nesting a <code>ModelAdminFieldsView</code> which knows how to create a form with fields, buttons, and links to related models. To create that form, <code>ModelAdminFieldsView</code> calls upon a number of views which extend <code>FieldView</code>, like <code>Select2View</code> and <code>HiddenInputView</code>, and renders them depending on the attributes &lt;-&gt; fields mapping in a model.
+</p>
+<p>
+<img src="https://lh3.googleusercontent.com/blogger_img_proxy/AEn0k_sNpot2qJy1vow5sQgq6YpBDocB__8gb-eirRPl0Q0Yd2OTRwcJOyPQonhNhPGXFj9y4fPY_rCe7GjzaH20xabpZsjmXmf8HmioJBD0JC00_Skb96m6jeOF2v2Rm1FunfixTKzv6eahE3il=s0-d" style="width:500px;"></p>
+
+<p><code>CollectionAdminPageView</code> is responsible for creating a page with a header, "new model" button, and then nesting a <code>CollectionAdminListView</code>, which knows how to create statistics charts via the nvd3 library and a tabular view of a collection via <code>CollectionAdminTableView</code>.
+</p>
+<p><img src="https://lh3.googleusercontent.com/blogger_img_proxy/AEn0k_uoYDxbgvPjEyabKgw7mlZMtjMalAUAXlaK--Ddq4_Rp5tnRHDGtespF-f4vQBcgykF-gmHhR9O8h5i5lpzX5UylKBC4Ebu5XDn1PSLRorLFODMsjiEI5gAJ_Z1lAvCAvSkL_mJy_57S38=s0-d" style="width:500px;"></p>
+
+<br>
+<p>To add a model to the frontend, we follow these steps, using the category model as an example:</p>
+<ul>
+  <li><strong>Create <code>models/CategoryAdminModel.js</code></strong>: This model extends <code>AdminModel</code>, an extension of <code>Backbone.Model</code>. It defines properties that are needed by Backbone, like the API endpoint, as well as custom properties that are needed by the views (and yes, that is not a perfect separation of data and presentation, but life must go on). The custom properties include a mapping of attributes to form field types, any custom buttons and modals, attributes to filter by in the table view, and more.
+<pre class="prettyprint">
+define(["jquery",
+          "backbone",
+          "underscore",
+          "js/core/coursera",
+          "pages/site-admin/models/AdminModel"
+          ],
+function($, Backbone, _, Coursera, AdminModel) {
+
+  var model = AdminModel.extend({
+
+    url: 'admin/categories',
+    webUrlLabel: 'categories',
+    label: 'Category',
+
+    displayName: function() {
+      return this.get('name');
+    },
+
+    fieldsets: function() {
+
+      return [{
+        name: 'name',
+        type: 'text'
+      }, {
+        name: 'short_name',
+        type: 'text',
+        readonly: !this.isNew()
+      }];
+    }
+
+  });
+
+  return model;
+
+});
+</pre>
+    <li><strong>Create <code>collections/CategoriesAdminCollection.js</code></strong>: This extends <code>AdminCollection</code>, and specifies a handful of properties needed by Backbone and our views. The bulk of the custom logic is in the model, not the collection.
+<pre class="prettyprint">
+define(["backbone",
+          "js/core/coursera",
+          "pages/site-admin/collections/AdminCollection",
+          "pages/site-admin/models/CategoryAdminModel"
+          ],
+
+function(Backbone, Coursera, AdminCollection, CategoryAdminModel) {
+
+  var collection = AdminCollection.extend({
+
+    url: 'admin/categories',
+
+    webUrlLabel: 'categories',
+
+    label: 'Categories',
+
+    model: CategoryAdminModel
+
+  });
+
+  return collection;
+});
+</pre>
+      <li><strong>Update <code>site-admin/routes.js</code></strong>: This routes file extends <code>Backbone.Router</code> and defines generic URLs that can handle any <code>AdminModel</code> or <code>AdminCollection</code>. We add the new models and collections to <code>modelAcls</code> and <code>collectionAcls</code>, respectively, so that we know what collections to link a user to in the dashboard view. We enforce actual ACLs on the server-side, of course.
+</ul>
+
+<br>
+<h3>The future</h3>
+
+<p>The site admin API and frontend have served us reasonably well as we have grown to want more editing abilities and workflow improvements, but there is much to be improved upon.
+</p>
+
+<h4>Collaborative Editing</h4>
+
+<p>
+While developing site admin by myself in my living room, there was one thing that never occurred to me: I was building a collaborative editing interface. We have many different sorts of admins that edit course data, everywhere from super users to university admins to instructors to TAs, and sometimes, there could be multiple admins editing at once. I didn't realize this, however, until after we unleashed site admin for a big launch and I got emails at 4am about instructors losing data and freaking out. I quickly realized how easily that could happen, if two staff were working on a course on different machines. As a quick fix, I added a notion of "protected fields" - fields that weren't allowed to go from something to nothing - and that prevented the worst case of admins losing all the text they'd painstakingly inputted. It does add a problem, however, of admins legitimately wanting to clear fields sometimes, and engineers needing to manually make that change. It also doesn't protect against losing incremental data in a field.</p>
+<p>
+To make site admin work better for multiple editors, there are a few approaches we've thought of, which could be combined in some optimal way:</p>
+<ul>
+<li><strong>Partial updates</strong>: Currently site admin does a PUT of the full data of the model, and saves it wholly. An approach we take in many of our frontends now is to use Backbone's changedAttributes to track what changed, and only do an HTTP PATCH and partial update of the model. That would mean two admins could edit different fields and not worry about overriding eachother's changes.
+<li><strong>Real-time update</strong>: We could poll for updates to the model, updating the fields when we see changes. If the admin is currently editing an updated field, we could alert to confirm override or show them the changed version.
+<li><strong>Notifications</strong>: We could keep track of what admins are on a page, and alert them about the possibility of concurrent edits, which might encourage them to consult with eachother about what changes they are making.
+<li><strong>Change confirmations</strong>: We could detect that something had changed since the admin started editing, and prompt the admin to confirm that yes, indeed, they are okay with that change.
+</ul>
+
+<h4>DRYer Permissions</h4>
+
+<p>We currently have code in the frontend that mirrors the permissions on the backend, like to figure out what collections a particular admin has access to at all, and to figure out what fields should be read-only for particular admins. This code is problematic since it means twice the code to change permission, and it's also dangerous because an engineer could fool themself into thinking that they'd secured something properly, if they did not put a test on the backend.</p>
+
+<p>A better approach might be an API that sends down the permissions for an admin, perhaps using the HTTP OPTIONS verb. For example, an HTTP OPTIONS request to <code>'admin/api'</code> might return the following:
+</p>
+<pre class="prettyprint">{"collection": ["categories", "universities", "instructors"]}</pre>
+<p>Once loading the form for a particular model, the HTTP OPTIONS request might return the following, based on inspecting the Django Form instances:</p>
+<pre class="prettyprint">{"fields": {
+   "short_name": {"read_only": false, "restriction": "[a-zA-Z]", "max_length": "20"},
+}</pre>
+<p>Those restrictions would also depend on whether the model was new or existing, and that would need to be represented in that API.</p>
+
+<h4>Soft Delete</h4>
+
+<p>When we do a delete in site admin now, it does a true delete, removing the rows and related rows from the database tables. That is a scary operation, of course, since it means that the only way to get back the data is to find it in an old database backup, provided we still have it around for the time of deletion.</p>
+
+<p>We would prefer to do a soft delete, which would mean adding a "deleted" column to each model, setting that to true upon deletion, and changing all of our APIs to honor that deleted column when fetching data. This also makes it easier to do an undo. The biggest hurdle to this is change would be auditing all of the APIs that call upon that data to make sure they respect the change.</p>
+
+<h4>Drafts vs. Master</h4>
+
+<p>When an admin edits and saves their changes in site admin now, the changes are immediately live. Admins don't always want this; they often want to be able to preview their changes, feel confident in them, and then make them live. We have this in place for our course admin data, like quizzes and lectures, but it would require significant changes to the database tables, admin APIs, and user-facing APIs. A step in the right direction might be to make it possible for admins to preview their course pages with the unsaved data by sending it through an iframe and postMessage, perhaps. That is made more difficult by the fact that our admin APIs represent the data in a very different form than the user-facing APIs, however.</p>
+
+<h4>Improved Logs</h4>
+
+<p>We currently record who did what to which model, but the "what" is only whether it was a creation, edit, or delete. Ideally, we would also include exactly what fields were changed, and what the diff was between the fields. That would be made much easier to do by adding HTTP PATCH support. We also need better pagination and searching of the logs, and we may want to expose them to non-super-users.
+</p>
+
+<h4>Workflow-Based vs. Model-Based</h4>
+<p>Django admin revolves around models, assuming that the admin thinks to themself, "Yes, I'd like to edit such and such today." However, as it turns out, admins more often think in terms of goals or workflows, such as "Today I'd like to release grades." or "Today I'd like to open the course for enrollment and let all the subscribers know." These workflows often involve different models at each step, and it is non intuitive for the user to have to figure out that sequence. For a few of them, we've created "Checklist" views, with steps and links to the relevant models, anchor'ed at the form element that should be edited. But I think it would be worth it to re-think the admin interface from scratch with the idea of workflows being a first class citizen, instead of something we've tacked on at the end.</p>
+
+
+
+  <script>/** Generated TOC
+    Stuart Langridge, July 2007
+
+    Generate a table of contents, based on headings in the page.
+
+    To place the TOC on the page, add
+
+    <div id="generated-toc"></div>
+
+    to the page where you want the TOC to appear. If this element
+    is not present, the TOC will not appear.
+
+    The TOC defaults to displaying all headings that are contained within
+    the same element as it itself is contained in (or all headings on the
+    page if you did not provide a generated-toc container). To override this,
+    provide a "highest heading" value by adding class="generate_from_h3"
+    (or h2, h4, etc) to the container. (If unspecified, this will display all
+    headings, as if class="generate_from_h1" was specified.)
+
+    The TOC defaults to operating only on headings contained within the same
+    element as it itself, i.e., in a page like this:
+
+    <div>
+      <div>
+        <div id="generated-toc"></div>
+        <h1>foo</h1>
+        <h2>bar</h2>
+      </div>
+      <h1>quux</h1>
+    </div>
+
+    The "quux" heading will not appear in the TOC. To override this,
+    add class="generate_for_page" to the container, which will process
+    all headings on the page wheresoever they may be.
+
+*/
+
+generated_toc = {
+  generate: function() {
+    // Identify our TOC element, and what it applies to
+    generate_from = '0';
+    generate_for = 'unset';
+    tocparent = document.getElementById('siteadmin-generated-toc');
+    if (tocparent) {
+      // there is a div class="generated-toc" in the document
+      // dictating where the TOC should appear
+      classes = tocparent.className.split(/\s+/);
+      for (var i=0; i<classes.length; i++) {
+        // if it specifies which heading level to generate from,
+        // or what level to generate for, save these specifications
+        if (classes[i].match(/^generate_from_h[1-6]$/)) {
+          generate_from = classes[i].substr(classes[i].length-1,1);
+        } else if (classes[i].match(/^generate_for_[a-z]+$/)) {
+          generate_for = classes[i].match(/^generate_for_([a-z])+$/)[1];
+        }
+      }
+    } else {
+      // They didn't specify a TOC element; exit
+      return;
+    }
+
+    // set top_node to be the element in the document under which
+    // we'll be analysing headings
+    if (generate_for == 'page') {
+      top_node = document.getElementsByTagName('body');
+    } else {
+      // i.e., explicitly set to "parent", left blank (so "unset"),
+      // or some invalid value
+      top_node = tocparent.parentNode;
+    }
+
+    // If there isn't a specified header level to generate from, work
+    // out what the first header level inside top_node is
+    // and make that the specified header level
+    if (generate_from == 0) {
+      first_header_found = generated_toc.findFirstHeader(top_node);
+      if (!first_header_found) {
+        // there were no headers at all inside top_node!
+        return;
+      } else {
+        generate_from = first_header_found.toLowerCase().substr(1);
+      }
+    }
+
+    // add all levels of heading we're paying attention to to the
+    // headings_to_treat dictionary, ready to be filled in later
+    headings_to_treat = {"h6":''};
+    for (var i=5; i>= parseInt(generate_from); i--) {
+      headings_to_treat["h" + i] = '';
+    }
+
+    // get headings. We can't say
+    // getElementsByTagName("h1" or "h2" or "h3"), etc, so get all
+    // elements and filter them ourselves
+    // need to use .all here because IE doesn't support gEBTN('*')
+    nodes = top_node.all ? top_node.all : top_node.getElementsByTagName('*');
+
+    // put all the headings we care about in headings
+    headings = [];
+    for (var i=0; i<nodes.length;i++) {
+      if (nodes[i].nodeName.toLowerCase() in headings_to_treat) {
+        // if heading has class no-TOC, skip it
+        if ((' ' + nodes[i].className + ' ').indexOf('no-TOC') != -1) {
+          continue;
+        }
+        headings.push(nodes[i]);
+      }
+    }
+
+    // make the basic elements of the TOC itself, ready to fill into
+
+    // first, check if there's a cookie defined to save the state as open
+    status = generated_toc.readCookie("generated_toc_display");
+    if (status && status == "open") {
+      display_initially = "block";
+      toggle_initially = "Hide table of contents";
+    } else {
+      display_initially = "none";
+      toggle_initially = "Show table of contents";
+    }
+
+    cur_head_lvl = "h" + generate_from;
+    cur_list_el = document.createElement('ul');
+    cur_list_el.style.display = display_initially;
+    p = document.createElement('p');
+    span = document.createElement('span');
+    span.className = 'hidden';
+    a = document.createElement('a');
+    a.href = '#aftertoc';
+    a.appendChild(document.createTextNode(''));
+    span.appendChild(a);
+    p.appendChild(span);
+    tocparent.appendChild(p);
+    p = document.createElement('p');
+    p.id = 'toggle-container';
+    a = document.createElement('a');
+    a.id = 'generated_toc_d_toggle';
+    a.appendChild(document.createTextNode(toggle_initially));
+    p.appendChild(a);
+    a.onclick = generated_toc.wrapOpenClose(a,cur_list_el);
+    a.href = '#';
+    tocparent.appendChild(p);
+    tocparent.appendChild(cur_list_el);
+
+    // now walk through our saved heading nodes
+    for (var i=0; i<headings.length; i++) {
+      this_head_el = headings[i];
+      this_head_lvl = headings[i].nodeName.toLowerCase();
+      if (!this_head_el.id) {
+        // if heading doesn't have an ID, give it one
+        this_head_el.id = 'heading_toc_j_' + i;
+        this_head_el.setAttribute('tabindex','-1');
+      }
+
+      while(this_head_lvl > cur_head_lvl) {
+        // this heading is at a lower level than the last one;
+        // create additional nested lists to put it at the right level
+
+        // get the *last* LI in the current list, and add our new UL to it
+        var last_listitem_el = null;
+        for (var j=0; j<cur_list_el.childNodes.length; j++) {
+          if (cur_list_el.childNodes[j].nodeName.toLowerCase() == 'li') {
+            last_listitem_el = cur_list_el.childNodes[j];
+          }
+        }
+        if (!last_listitem_el) {
+          // there aren't any LIs, so create a new one to add the UL to
+          last_listitem_el = document.createElement('li');
+        }
+        new_list_el = document.createElement('ul');
+        last_listitem_el.appendChild(new_list_el);
+        cur_list_el.appendChild(last_listitem_el);
+        cur_list_el = new_list_el;
+        cur_head_lvl = 'h' + (parseInt(cur_head_lvl.substr(1,1)) + 1);
+      }
+
+      while (this_head_lvl < cur_head_lvl) {
+        // this heading is at a higher level than the last one;
+        // go back up the TOC to put it at the right level
+        cur_list_el = cur_list_el.parentNode.parentNode;
+        cur_head_lvl = 'h' + (parseInt(cur_head_lvl.substr(1,1)) - 1);
+      }
+
+      // create a link to this heading, and add it to the TOC
+      li = document.createElement('li');
+      a = document.createElement('a');
+      a.href = '#' + this_head_el.id;
+      a.appendChild(document.createTextNode(generated_toc.innerText(this_head_el)));
+      li.appendChild(a);
+      cur_list_el.appendChild(li);
+    }
+
+    // add an aftertoc paragraph as destination for the skip-toc link
+    p = document.createElement('p');
+    p.id = 'aftertoc';
+    tocparent.appendChild(p);
+
+    // go through the TOC and find all LIs that are "empty", i.e., contain
+    // only ULs and no links, and give them class="missing"
+    var alllis = tocparent.getElementsByTagName("li");
+    for (var i=0; i<alllis.length; i++) {
+      var foundlink = false;
+      for (var j=0; j<alllis[i].childNodes.length; j++) {
+        if (alllis[i].childNodes[j].nodeName.toLowerCase() == 'a') {
+          foundlink = true;
+        }
+      }
+      if (!foundlink) {
+        alllis[i].className = "missing";
+      } else {
+        alllis[i].className = "notmissing";
+      }
+    }
+
+  },
+
+  wrapOpenClose: function(a, cur_list_el) {
+    // we return a function here so that it acts as a closure;
+    // in essence the inner function, which is the event handler
+    // for clicking on the toggle-toc link, remembers the a and cur_list_el
+    // elements as they are when they're passed in to it.
+    // This is an explicit function rather than an anonymous function
+    // defined where it's called so it's easier to understand.
+    return function(e) {
+      d = cur_list_el.style.display;
+      a.firstChild.nodeValue = (d == 'block' ? 'Show' : 'Hide') + ' table of contents';
+      a.className = (d == 'block' ? 'toggle-closed' : 'toggle-open');
+      cur_list_el.style.display = d == 'block' ? 'none' : 'block';
+      // set a cookie to "open" or "closed" to save the state of the TOC
+      if (cur_list_el.style.display == "block") {
+        generated_toc.createCookie("generated_toc_display","open",21);
+      } else {
+        generated_toc.createCookie("generated_toc_display","closed",21);
+      }
+      if (window.event) {
+        window.event.returnValue = false;
+        window.event.cancelBubble = true;
+      } else {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    }
+  },
+
+  /* cookie handling: http://www.quirksmode.org/js/cookies.html */
+  createCookie: function(name,value,days) {
+    if (days) {
+      var date = new Date();
+      date.setTime(date.getTime()+(days*24*60*60*1000));
+      var expires = "; expires="+date.toGMTString();
+    }
+    else var expires = "";
+    document.cookie = name+"="+value+expires+"; path=/";
+  },
+
+  readCookie: function(name) {
+    var nameEQ = name + "=";
+    var ca = document.cookie.split(';');
+    for(var i=0;i < ca.length;i++) {
+      var c = ca[i];
+      while (c.charAt(0)==' ') c = c.substring(1,c.length);
+      if (c.indexOf(nameEQ) == 0)
+        return c.substring(nameEQ.length,c.length);
+    }
+    return null;
+  },
+
+  eraseCookie: function(name) {
+    createCookie(name,"",-1);
+  },
+
+  innerText: function(el) {
+    return (typeof(el.innerText) != 'undefined') ? el.innerText :
+          (typeof(el.textContent) != 'undefined') ? el.textContent :
+          el.innerHTML.replace(/<[^>]+>/g, '');
+  },
+
+  findFirstHeader: function(node) {
+    // a recursive function which returns the first header it finds inside
+    // node, or null if there are no functions inside node.
+    var nn = node.nodeName.toLowerCase();
+    if (nn.match(/^h[1-6]$/)) {
+      // this node is itself a header; return our name
+      return nn;
+    } else {
+      for (var i=0; i<node.childNodes.length; i++) {
+        var subvalue = generated_toc.findFirstHeader(node.childNodes[i]);
+        // if one of the subnodes finds a header, abort the loop and return it
+        if (subvalue) return subvalue;
+      }
+      // no headers in this node at all
+      return null;
+    }
+  },
+
+  init: function() {
+    // quit if this function has already been called
+    if (arguments.callee.done) return;
+
+    // flag this function so we don't do the same thing twice
+    arguments.callee.done = true;
+
+    generated_toc.generate();
+  }
+};
+
+(function(i) {var u =navigator.userAgent;var e=/*@cc_on!@*/false; var st =
+setTimeout;if(/webkit/i.test(u)){st(function(){var dr=document.readyState;
+if(dr=="loaded"||dr=="complete"){i()}else{st(arguments.callee,10);}},10);}
+else if((/mozilla/i.test(u)&&!/(compati)/.test(u)) || (/opera/i.test(u))){
+document.addEventListener("DOMContentLoaded",i,false); } else if(e){     (
+function(){var t=document.createElement('doc:rdy');try{t.doScroll('left');
+i();t=null;}catch(e){st(arguments.callee,0);}})();}else{window.onload=i;}})(generated_toc.init);
+
+</script>
+<div style='clear: both;'></div>
+</div>
+<div class='post-footer'>
+<div class='post-footer-line post-footer-line-1'><span class='post-author vcard'>
+Posted by
+<span class='fn'>
+<a href='https://www.blogger.com/profile/15947664772001597300' rel='author' title='author profile'>
+Pamela Fox
+</a>
+</span>
+</span>
+<span class='post-comment-link'>
+</span>
+<span class='post-icons'>
+</span>
+<span class='post-backlinks post-comment-link'>
+</span>
+</div>
+<div class='post-footer-line post-footer-line-2'><span class='post-labels'>
+Labels:
+<a href='https://blog.pamelafox.org/search/label/backbone' rel='tag'>backbone</a>,
+<a href='https://blog.pamelafox.org/search/label/coursera' rel='tag'>coursera</a>,
+<a href='https://blog.pamelafox.org/search/label/django' rel='tag'>django</a>,
+<a href='https://blog.pamelafox.org/search/label/javascript' rel='tag'>javascript</a>,
+<a href='https://blog.pamelafox.org/search/label/python' rel='tag'>python</a>
+</span>
+</div>
+<div class='post-footer-line post-footer-line-3'></div>
+</div>
+</div>
+<div class='comments' id='comments'>
+<a name='comments'></a>
+<h4>No comments:</h4>
+<div id='Blog1_comments-block-wrapper'>
+<dl class='avatar-comment-indent' id='comments-block'>
+</dl>
+</div>
+<p class='comment-footer'>
+<a href='https://www.blogger.com/comment.g?blogID=8501278254137514883&postID=6431703880654450220' onclick=''>Post a Comment</a>
+</p>
+</div>
+</div>
+
+        </div></div>
+
+</div>
+<div class='blog-pager' id='blog-pager'>
+<span id='blog-pager-newer-link'>
+<a class='blog-pager-newer-link' href='https://blog.pamelafox.org/2013/07/my-year-at-coursera.html' id='Blog1_blog-pager-newer-link' title='Newer Post'>Newer Post</a>
+</span>
+<span id='blog-pager-older-link'>
+<a class='blog-pager-older-link' href='https://blog.pamelafox.org/2013/07/a-guide-to-writing-backbone-apps-at.html' id='Blog1_blog-pager-older-link' title='Older Post'>Older Post</a>
+</span>
+<a class='home-link' href='https://blog.pamelafox.org/'>Home</a>
+</div>
+<div class='clear'></div>
+<div class='post-feeds'>
+<div class='feed-links'>
+Subscribe to:
+<a class='feed-link' href='https://blog.pamelafox.org/feeds/6431703880654450220/comments/default' target='_blank' type='application/atom+xml'>Post Comments (Atom)</a>
+</div>
+</div>
+</div></div>
+</div>
+</div>
+<div class='column-left-outer'>
+<div class='column-left-inner'>
+<aside>
+</aside>
+</div>
+</div>
+<div class='column-right-outer'>
+<div class='column-right-inner'>
+<aside>
+<div class='sidebar section' id='sidebar-right-1'><div class='widget HTML' data-version='1' id='HTML5'>
+<div class='widget-content'>
+<a href="http://blog.pamelafox.org/feeds/posts/default">Subscribe to this blog.</a>
+</div>
+<div class='clear'></div>
+</div><div class='widget HTML' data-version='1' id='HTML3'>
+<h2 class='title'>about me</h2>
+<div class='widget-content'>
+Currently a Cloud Advocate in Python at Microsoft. Check out my <a href="http://pamelafox.org">personal homepage</a> to find out about my projects, talks, code, reading list, and more.
+</div>
+<div class='clear'></div>
+</div><div class='widget BlogArchive' data-version='1' id='BlogArchive1'>
+<h2>Blog Archive</h2>
+<div class='widget-content'>
+<div id='ArchiveList'>
+<div id='BlogArchive1_ArchiveList'>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2024/'>
+2024
+</a>
+<span class='post-count' dir='ltr'>(6)</span>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2024/02/'>
+February
+</a>
+<span class='post-count' dir='ltr'>(1)</span>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2024/01/'>
+January
+</a>
+<span class='post-count' dir='ltr'>(5)</span>
+</li>
+</ul>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2023/'>
+2023
+</a>
+<span class='post-count' dir='ltr'>(33)</span>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2023/12/'>
+December
+</a>
+<span class='post-count' dir='ltr'>(3)</span>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2023/10/'>
+October
+</a>
+<span class='post-count' dir='ltr'>(1)</span>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2023/09/'>
+September
+</a>
+<span class='post-count' dir='ltr'>(5)</span>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2023/08/'>
+August
+</a>
+<span class='post-count' dir='ltr'>(2)</span>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2023/07/'>
+July
+</a>
+<span class='post-count' dir='ltr'>(1)</span>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2023/06/'>
+June
+</a>
+<span class='post-count' dir='ltr'>(3)</span>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2023/05/'>
+May
+</a>
+<span class='post-count' dir='ltr'>(4)</span>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2023/04/'>
+April
+</a>
+<span class='post-count' dir='ltr'>(1)</span>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2023/03/'>
+March
+</a>
+<span class='post-count' dir='ltr'>(5)</span>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2023/02/'>
+February
+</a>
+<span class='post-count' dir='ltr'>(5)</span>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2023/01/'>
+January
+</a>
+<span class='post-count' dir='ltr'>(3)</span>
+</li>
+</ul>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2022/'>
+2022
+</a>
+<span class='post-count' dir='ltr'>(21)</span>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2022/11/'>
+November
+</a>
+<span class='post-count' dir='ltr'>(3)</span>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2022/10/'>
+October
+</a>
+<span class='post-count' dir='ltr'>(2)</span>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2022/09/'>
+September
+</a>
+<span class='post-count' dir='ltr'>(4)</span>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2022/08/'>
+August
+</a>
+<span class='post-count' dir='ltr'>(4)</span>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2022/07/'>
+July
+</a>
+<span class='post-count' dir='ltr'>(5)</span>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2022/06/'>
+June
+</a>
+<span class='post-count' dir='ltr'>(1)</span>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2022/05/'>
+May
+</a>
+<span class='post-count' dir='ltr'>(1)</span>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2022/01/'>
+January
+</a>
+<span class='post-count' dir='ltr'>(1)</span>
+</li>
+</ul>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2020/'>
+2020
+</a>
+<span class='post-count' dir='ltr'>(4)</span>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2020/12/'>
+December
+</a>
+<span class='post-count' dir='ltr'>(3)</span>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2020/01/'>
+January
+</a>
+<span class='post-count' dir='ltr'>(1)</span>
+</li>
+</ul>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2018/'>
+2018
+</a>
+<span class='post-count' dir='ltr'>(6)</span>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2018/06/'>
+June
+</a>
+<span class='post-count' dir='ltr'>(1)</span>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2018/03/'>
+March
+</a>
+<span class='post-count' dir='ltr'>(2)</span>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2018/02/'>
+February
+</a>
+<span class='post-count' dir='ltr'>(2)</span>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2018/01/'>
+January
+</a>
+<span class='post-count' dir='ltr'>(1)</span>
+</li>
+</ul>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2017/'>
+2017
+</a>
+<span class='post-count' dir='ltr'>(11)</span>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2017/08/'>
+August
+</a>
+<span class='post-count' dir='ltr'>(2)</span>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2017/05/'>
+May
+</a>
+<span class='post-count' dir='ltr'>(1)</span>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2017/04/'>
+April
+</a>
+<span class='post-count' dir='ltr'>(4)</span>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2017/03/'>
+March
+</a>
+<span class='post-count' dir='ltr'>(2)</span>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2017/01/'>
+January
+</a>
+<span class='post-count' dir='ltr'>(2)</span>
+</li>
+</ul>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2016/'>
+2016
+</a>
+<span class='post-count' dir='ltr'>(1)</span>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2016/08/'>
+August
+</a>
+<span class='post-count' dir='ltr'>(1)</span>
+</li>
+</ul>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2015/'>
+2015
+</a>
+<span class='post-count' dir='ltr'>(8)</span>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2015/12/'>
+December
+</a>
+<span class='post-count' dir='ltr'>(2)</span>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2015/10/'>
+October
+</a>
+<span class='post-count' dir='ltr'>(1)</span>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2015/09/'>
+September
+</a>
+<span class='post-count' dir='ltr'>(1)</span>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2015/07/'>
+July
+</a>
+<span class='post-count' dir='ltr'>(1)</span>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2015/06/'>
+June
+</a>
+<span class='post-count' dir='ltr'>(2)</span>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2015/04/'>
+April
+</a>
+<span class='post-count' dir='ltr'>(1)</span>
+</li>
+</ul>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2014/'>
+2014
+</a>
+<span class='post-count' dir='ltr'>(4)</span>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2014/06/'>
+June
+</a>
+<span class='post-count' dir='ltr'>(1)</span>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2014/02/'>
+February
+</a>
+<span class='post-count' dir='ltr'>(1)</span>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2014/01/'>
+January
+</a>
+<span class='post-count' dir='ltr'>(2)</span>
+</li>
+</ul>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate expanded'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy toggle-open'>
+
+        &#9660;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2013/'>
+2013
+</a>
+<span class='post-count' dir='ltr'>(43)</span>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2013/10/'>
+October
+</a>
+<span class='post-count' dir='ltr'>(3)</span>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2013/09/'>
+September
+</a>
+<span class='post-count' dir='ltr'>(3)</span>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2013/08/'>
+August
+</a>
+<span class='post-count' dir='ltr'>(5)</span>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate expanded'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy toggle-open'>
+
+        &#9660;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2013/07/'>
+July
+</a>
+<span class='post-count' dir='ltr'>(5)</span>
+<ul class='posts'>
+<li><a href='https://blog.pamelafox.org/2013/07/my-year-at-coursera.html'>My Year at Coursera</a></li>
+<li><a href='https://blog.pamelafox.org/2013/07/rewriting-django-admin-in-backbone.html'>Rewriting Django Admin in Backbone</a></li>
+<li><a href='https://blog.pamelafox.org/2013/07/a-guide-to-writing-backbone-apps-at.html'>A Guide to Writing Backbone Apps at Coursera</a></li>
+<li><a href='https://blog.pamelafox.org/2013/07/what-to-look-for-in-software.html'>What to look for in a software engineering culture</a></li>
+<li><a href='https://blog.pamelafox.org/2013/07/which-javascript-library-should-i-pick.html'>Which JavaScript Library Should I Pick?</a></li>
+</ul>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2013/06/'>
+June
+</a>
+<span class='post-count' dir='ltr'>(7)</span>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2013/05/'>
+May
+</a>
+<span class='post-count' dir='ltr'>(2)</span>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2013/04/'>
+April
+</a>
+<span class='post-count' dir='ltr'>(3)</span>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2013/03/'>
+March
+</a>
+<span class='post-count' dir='ltr'>(7)</span>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2013/02/'>
+February
+</a>
+<span class='post-count' dir='ltr'>(4)</span>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2013/01/'>
+January
+</a>
+<span class='post-count' dir='ltr'>(4)</span>
+</li>
+</ul>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2012/'>
+2012
+</a>
+<span class='post-count' dir='ltr'>(39)</span>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2012/12/'>
+December
+</a>
+<span class='post-count' dir='ltr'>(3)</span>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2012/11/'>
+November
+</a>
+<span class='post-count' dir='ltr'>(1)</span>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2012/10/'>
+October
+</a>
+<span class='post-count' dir='ltr'>(2)</span>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2012/09/'>
+September
+</a>
+<span class='post-count' dir='ltr'>(2)</span>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2012/08/'>
+August
+</a>
+<span class='post-count' dir='ltr'>(3)</span>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2012/06/'>
+June
+</a>
+<span class='post-count' dir='ltr'>(5)</span>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2012/05/'>
+May
+</a>
+<span class='post-count' dir='ltr'>(4)</span>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2012/04/'>
+April
+</a>
+<span class='post-count' dir='ltr'>(5)</span>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2012/03/'>
+March
+</a>
+<span class='post-count' dir='ltr'>(5)</span>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2012/02/'>
+February
+</a>
+<span class='post-count' dir='ltr'>(7)</span>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2012/01/'>
+January
+</a>
+<span class='post-count' dir='ltr'>(2)</span>
+</li>
+</ul>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2011/'>
+2011
+</a>
+<span class='post-count' dir='ltr'>(36)</span>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2011/12/'>
+December
+</a>
+<span class='post-count' dir='ltr'>(3)</span>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2011/11/'>
+November
+</a>
+<span class='post-count' dir='ltr'>(1)</span>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2011/10/'>
+October
+</a>
+<span class='post-count' dir='ltr'>(9)</span>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2011/09/'>
+September
+</a>
+<span class='post-count' dir='ltr'>(3)</span>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2011/08/'>
+August
+</a>
+<span class='post-count' dir='ltr'>(2)</span>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2011/05/'>
+May
+</a>
+<span class='post-count' dir='ltr'>(5)</span>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2011/04/'>
+April
+</a>
+<span class='post-count' dir='ltr'>(3)</span>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2011/03/'>
+March
+</a>
+<span class='post-count' dir='ltr'>(5)</span>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2011/02/'>
+February
+</a>
+<span class='post-count' dir='ltr'>(3)</span>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2011/01/'>
+January
+</a>
+<span class='post-count' dir='ltr'>(2)</span>
+</li>
+</ul>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2010/'>
+2010
+</a>
+<span class='post-count' dir='ltr'>(36)</span>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2010/12/'>
+December
+</a>
+<span class='post-count' dir='ltr'>(8)</span>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2010/11/'>
+November
+</a>
+<span class='post-count' dir='ltr'>(3)</span>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2010/10/'>
+October
+</a>
+<span class='post-count' dir='ltr'>(6)</span>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2010/09/'>
+September
+</a>
+<span class='post-count' dir='ltr'>(6)</span>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2010/08/'>
+August
+</a>
+<span class='post-count' dir='ltr'>(10)</span>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2010/07/'>
+July
+</a>
+<span class='post-count' dir='ltr'>(3)</span>
+</li>
+</ul>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2009/'>
+2009
+</a>
+<span class='post-count' dir='ltr'>(31)</span>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2009/11/'>
+November
+</a>
+<span class='post-count' dir='ltr'>(1)</span>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2009/10/'>
+October
+</a>
+<span class='post-count' dir='ltr'>(5)</span>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2009/09/'>
+September
+</a>
+<span class='post-count' dir='ltr'>(2)</span>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2009/06/'>
+June
+</a>
+<span class='post-count' dir='ltr'>(1)</span>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2009/05/'>
+May
+</a>
+<span class='post-count' dir='ltr'>(5)</span>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2009/04/'>
+April
+</a>
+<span class='post-count' dir='ltr'>(4)</span>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2009/03/'>
+March
+</a>
+<span class='post-count' dir='ltr'>(7)</span>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2009/02/'>
+February
+</a>
+<span class='post-count' dir='ltr'>(4)</span>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2009/01/'>
+January
+</a>
+<span class='post-count' dir='ltr'>(2)</span>
+</li>
+</ul>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2008/'>
+2008
+</a>
+<span class='post-count' dir='ltr'>(11)</span>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2008/11/'>
+November
+</a>
+<span class='post-count' dir='ltr'>(2)</span>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2008/10/'>
+October
+</a>
+<span class='post-count' dir='ltr'>(3)</span>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2008/09/'>
+September
+</a>
+<span class='post-count' dir='ltr'>(2)</span>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2008/05/'>
+May
+</a>
+<span class='post-count' dir='ltr'>(1)</span>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2008/04/'>
+April
+</a>
+<span class='post-count' dir='ltr'>(2)</span>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2008/01/'>
+January
+</a>
+<span class='post-count' dir='ltr'>(1)</span>
+</li>
+</ul>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2007/'>
+2007
+</a>
+<span class='post-count' dir='ltr'>(4)</span>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2007/12/'>
+December
+</a>
+<span class='post-count' dir='ltr'>(2)</span>
+</li>
+</ul>
+<ul class='hierarchy'>
+<li class='archivedate collapsed'>
+<a class='toggle' href='javascript:void(0)'>
+<span class='zippy'>
+
+        &#9658;&#160;
+
+</span>
+</a>
+<a class='post-count-link' href='https://blog.pamelafox.org/2007/10/'>
+October
+</a>
+<span class='post-count' dir='ltr'>(2)</span>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+<div class='clear'></div>
+</div>
+</div></div>
+</aside>
+</div>
+</div>
+</div>
+<div style='clear: both'></div>
+<!-- columns -->
+</div>
+<!-- main -->
+</div>
+</div>
+<div class='main-cap-bottom cap-bottom'>
+<div class='cap-left'></div>
+<div class='cap-right'></div>
+</div>
+</div>
+<footer>
+<div class='footer-outer'>
+<div class='footer-cap-top cap-top'>
+<div class='cap-left'></div>
+<div class='cap-right'></div>
+</div>
+<div class='fauxborder-left footer-fauxborder-left'>
+<div class='fauxborder-right footer-fauxborder-right'></div>
+<div class='region-inner footer-inner'>
+<div class='foot section' id='footer-1'><div class='widget HTML' data-version='1' id='HTML6'>
+<div class='widget-content'>
+<link rel="stylesheet"
+ href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/default.min.css" />
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
+</div>
+<div class='clear'></div>
+</div></div>
+<table border='0' cellpadding='0' cellspacing='0' class='section-columns columns-2'>
+<tbody>
+<tr>
+<td class='first columns-cell'>
+<div class='foot no-items section' id='footer-2-1'></div>
+</td>
+<td class='columns-cell'>
+<div class='foot no-items section' id='footer-2-2'></div>
+</td>
+</tr>
+</tbody>
+</table>
+<!-- outside of the include in order to lock Attribution widget -->
+<div class='foot section' id='footer-3'><div class='widget Attribution' data-version='1' id='Attribution1'>
+<div class='widget-content' style='text-align: center;'>
+Powered by <a href='https://www.blogger.com' target='_blank'>Blogger</a>.
+</div>
+<div class='clear'></div>
+</div></div>
+</div>
+</div>
+<div class='footer-cap-bottom cap-bottom'>
+<div class='cap-left'></div>
+<div class='cap-right'></div>
+</div>
+</div>
+</footer>
+<!-- content -->
+</div>
+</div>
+<div class='content-cap-bottom cap-bottom'>
+<div class='cap-left'></div>
+<div class='cap-right'></div>
+</div>
+</div>
+</div>
+<script type='text/javascript'>
+    window.setTimeout(function() {
+        document.body.className = document.body.className.replace('loading', '');
+      }, 10);
+     prettyPrint();
+  </script>
+
+<script type="text/javascript" src="https://www.blogger.com/static/v1/widgets/2020438593-widgets.js"></script>
+<script type='text/javascript'>
+window['__wavt'] = 'AOuZoY4YUhmx35ooh3jhsstaspZs044iMQ:1709045468760';_WidgetManager._Init('//www.blogger.com/rearrange?blogID\x3d8501278254137514883','//blog.pamelafox.org/2013/07/rewriting-django-admin-in-backbone.html','8501278254137514883');
+_WidgetManager._SetDataContext([{'name': 'blog', 'data': {'blogId': '8501278254137514883', 'title': 'pamela fox\x27s blog', 'url': 'https://blog.pamelafox.org/2013/07/rewriting-django-admin-in-backbone.html', 'canonicalUrl': 'http://blog.pamelafox.org/2013/07/rewriting-django-admin-in-backbone.html', 'homepageUrl': 'https://blog.pamelafox.org/', 'searchUrl': 'https://blog.pamelafox.org/search', 'canonicalHomepageUrl': 'http://blog.pamelafox.org/', 'blogspotFaviconUrl': 'https://blog.pamelafox.org/favicon.ico', 'bloggerUrl': 'https://www.blogger.com', 'hasCustomDomain': true, 'httpsEnabled': true, 'enabledCommentProfileImages': true, 'gPlusViewType': 'FILTERED_POSTMOD', 'adultContent': false, 'analyticsAccountNumber': '', 'encoding': 'UTF-8', 'locale': 'en', 'localeUnderscoreDelimited': 'en', 'languageDirection': 'ltr', 'isPrivate': false, 'isMobile': false, 'isMobileRequest': false, 'mobileClass': '', 'isPrivateBlog': false, 'isDynamicViewsAvailable': true, 'feedLinks': '\x3clink rel\x3d\x22alternate\x22 type\x3d\x22application/atom+xml\x22 title\x3d\x22pamela fox\x26#39;s blog - Atom\x22 href\x3d\x22https://blog.pamelafox.org/feeds/posts/default\x22 /\x3e\n\x3clink rel\x3d\x22alternate\x22 type\x3d\x22application/rss+xml\x22 title\x3d\x22pamela fox\x26#39;s blog - RSS\x22 href\x3d\x22https://blog.pamelafox.org/feeds/posts/default?alt\x3drss\x22 /\x3e\n\x3clink rel\x3d\x22service.post\x22 type\x3d\x22application/atom+xml\x22 title\x3d\x22pamela fox\x26#39;s blog - Atom\x22 href\x3d\x22https://www.blogger.com/feeds/8501278254137514883/posts/default\x22 /\x3e\n\n\x3clink rel\x3d\x22alternate\x22 type\x3d\x22application/atom+xml\x22 title\x3d\x22pamela fox\x26#39;s blog - Atom\x22 href\x3d\x22https://blog.pamelafox.org/feeds/6431703880654450220/comments/default\x22 /\x3e\n', 'meTag': '', 'adsenseHostId': 'ca-host-pub-1556223355139109', 'adsenseHasAds': false, 'adsenseAutoAds': false, 'boqCommentIframeForm': true, 'loginRedirectParam': '', 'view': '', 'dynamicViewsCommentsSrc': '//www.blogblog.com/dynamicviews/4224c15c4e7c9321/js/comments.js', 'dynamicViewsScriptSrc': '//www.blogblog.com/dynamicviews/e5181b563f3b1b39', 'plusOneApiSrc': 'https://apis.google.com/js/platform.js', 'disableGComments': true, 'interstitialAccepted': false, 'sharing': {'platforms': [{'name': 'Get link', 'key': 'link', 'shareMessage': 'Get link', 'target': ''}, {'name': 'Facebook', 'key': 'facebook', 'shareMessage': 'Share to Facebook', 'target': 'facebook'}, {'name': 'BlogThis!', 'key': 'blogThis', 'shareMessage': 'BlogThis!', 'target': 'blog'}, {'name': 'Twitter', 'key': 'twitter', 'shareMessage': 'Share to Twitter', 'target': 'twitter'}, {'name': 'Pinterest', 'key': 'pinterest', 'shareMessage': 'Share to Pinterest', 'target': 'pinterest'}, {'name': 'Email', 'key': 'email', 'shareMessage': 'Email', 'target': 'email'}], 'disableGooglePlus': true, 'googlePlusShareButtonWidth': 0, 'googlePlusBootstrap': '\x3cscript type\x3d\x22text/javascript\x22\x3ewindow.___gcfg \x3d {\x27lang\x27: \x27en\x27};\x3c/script\x3e'}, 'hasCustomJumpLinkMessage': false, 'jumpLinkMessage': 'Read more', 'pageType': 'item', 'postId': '6431703880654450220', 'postImageUrl': 'http://rewriting-django-admin.appspot.com/images/whyweneedadmin.png', 'pageName': 'Rewriting Django Admin in Backbone', 'pageTitle': 'pamela fox\x27s blog: Rewriting Django Admin in Backbone'}}, {'name': 'features', 'data': {}}, {'name': 'messages', 'data': {'edit': 'Edit', 'linkCopiedToClipboard': 'Link copied to clipboard!', 'ok': 'Ok', 'postLink': 'Post Link'}}, {'name': 'template', 'data': {'name': 'custom', 'localizedName': 'Custom', 'isResponsive': false, 'isAlternateRendering': false, 'isCustom': true}}, {'name': 'view', 'data': {'classic': {'name': 'classic', 'url': '?view\x3dclassic'}, 'flipcard': {'name': 'flipcard', 'url': '?view\x3dflipcard'}, 'magazine': {'name': 'magazine', 'url': '?view\x3dmagazine'}, 'mosaic': {'name': 'mosaic', 'url': '?view\x3dmosaic'}, 'sidebar': {'name': 'sidebar', 'url': '?view\x3dsidebar'}, 'snapshot': {'name': 'snapshot', 'url': '?view\x3dsnapshot'}, 'timeslide': {'name': 'timeslide', 'url': '?view\x3dtimeslide'}, 'isMobile': false, 'title': 'Rewriting Django Admin in Backbone', 'description': ' Preamble:  This is an internal guide I wrote for Coursera about our site admin app, which is a Backbone \x22port\x22 of Django admin. I\x27ve snapsh...', 'featuredImage': 'https://lh3.googleusercontent.com/blogger_img_proxy/AEn0k_vy5iPn1rAP-nYiF61fc3usJ8NACdotBdp5hFXWL6X7R1zYz_Bk0-_wMPSWe3Es6jNDhbvv-7QOXYb18o_cYxdPYrS1q8MIdE9KVmdEryz5kPRMuWxNSWT-syjCpp6mCTvuZAJRn0Q', 'url': 'https://blog.pamelafox.org/2013/07/rewriting-django-admin-in-backbone.html', 'type': 'item', 'isSingleItem': true, 'isMultipleItems': false, 'isError': false, 'isPage': false, 'isPost': true, 'isHomepage': false, 'isArchive': false, 'isLabelSearch': false, 'postId': 6431703880654450220}}]);
+_WidgetManager._RegisterWidget('_NavbarView', new _WidgetInfo('Navbar1', 'navbar', document.getElementById('Navbar1'), {}, 'displayModeFull'));
+_WidgetManager._RegisterWidget('_HeaderView', new _WidgetInfo('Header1', 'header', document.getElementById('Header1'), {}, 'displayModeFull'));
+_WidgetManager._RegisterWidget('_BlogView', new _WidgetInfo('Blog1', 'main', document.getElementById('Blog1'), {'cmtInteractionsEnabled': false, 'lightboxEnabled': true, 'lightboxModuleUrl': 'https://www.blogger.com/static/v1/jsbin/171596359-lbx.js', 'lightboxCssUrl': 'https://www.blogger.com/static/v1/v-css/3268905543-lightbox_bundle.css'}, 'displayModeFull'));
+_WidgetManager._RegisterWidget('_HTMLView', new _WidgetInfo('HTML5', 'sidebar-right-1', document.getElementById('HTML5'), {}, 'displayModeFull'));
+_WidgetManager._RegisterWidget('_HTMLView', new _WidgetInfo('HTML3', 'sidebar-right-1', document.getElementById('HTML3'), {}, 'displayModeFull'));
+_WidgetManager._RegisterWidget('_BlogArchiveView', new _WidgetInfo('BlogArchive1', 'sidebar-right-1', document.getElementById('BlogArchive1'), {'languageDirection': 'ltr', 'loadingMessage': 'Loading\x26hellip;'}, 'displayModeFull'));
+_WidgetManager._RegisterWidget('_HTMLView', new _WidgetInfo('HTML6', 'footer-1', document.getElementById('HTML6'), {}, 'displayModeFull'));
+_WidgetManager._RegisterWidget('_AttributionView', new _WidgetInfo('Attribution1', 'footer-3', document.getElementById('Attribution1'), {}, 'displayModeFull'));
+</script>
+</body>
+</html>
