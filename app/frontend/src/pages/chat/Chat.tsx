@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect } from "react";
-import { Checkbox, Panel, DefaultButton, TextField, SpinButton, Slider } from "@fluentui/react";
-import { SparkleFilled } from "@fluentui/react-icons";
+import { Checkbox, Panel, DefaultButton, TextField, SpinButton, Slider, TooltipHost } from "@fluentui/react";
+import { SparkleFilled, Info16Regular } from "@fluentui/react-icons";
 import readNDJSONStream from "ndjson-readablestream";
 
 import styles from "./Chat.module.css";
@@ -28,6 +28,18 @@ import { VectorSettings } from "../../components/VectorSettings";
 import { useMsal } from "@azure/msal-react";
 import { TokenClaimsDisplay } from "../../components/TokenClaimsDisplay";
 import { GPT4VSettings } from "../../components/GPT4VSettings";
+
+// beak: triangle color
+// beakCurtain: outer edge
+// calloutMain: content center
+// No style to control text color
+const toolTipTextCalloutProps = {
+    styles: {
+        beak: { background: "#D3D3D3" },
+        beakCurtain: { background: "#D3D3D3" },
+        calloutMain: { background: "#D3D3D3" }
+    }
+};
 
 const Chat = () => {
     const [isConfigPanelOpen, setIsConfigPanelOpen] = useState(false);
@@ -374,26 +386,32 @@ const Chat = () => {
                     onRenderFooterContent={() => <DefaultButton onClick={() => setIsConfigPanelOpen(false)}>Close</DefaultButton>}
                     isFooterAtBottom={true}
                 >
-                    <TextField
-                        className={styles.chatSettingsSeparator}
-                        defaultValue={promptTemplate}
-                        label="Override prompt template"
-                        multiline
-                        autoAdjustHeight
-                        onChange={onPromptTemplateChange}
-                    />
+                    <TooltipHost content={"hi"} calloutProps={toolTipTextCalloutProps}>
+                        <TextField
+                            className={styles.chatSettingsSeparator}
+                            defaultValue={promptTemplate}
+                            label="Override prompt template"
+                            multiline
+                            autoAdjustHeight
+                            onChange={onPromptTemplateChange}
+                        />
+                    </TooltipHost>
 
-                    <Slider
-                        className={styles.chatSettingsSeparator}
-                        label="Temperature"
-                        min={0}
-                        max={1}
-                        step={0.1}
-                        defaultValue={temperature}
-                        onChange={onTemperatureChange}
-                        showValue
-                        snapToStep
-                    />
+                    <TooltipHost content={"hi"} calloutProps={toolTipTextCalloutProps}>
+                        <Slider
+                            className={styles.chatSettingsSeparator}
+                            label="Temperature"
+                            min={0}
+                            max={1}
+                            step={0.1}
+                            defaultValue={temperature}
+                            onChange={onTemperatureChange}
+                            showValue
+                            snapToStep
+                        />
+                    </TooltipHost>
+
+                    <Info16Regular aria-label="Emoji" />
 
                     <SpinButton
                         className={styles.chatSettingsSeparator}
