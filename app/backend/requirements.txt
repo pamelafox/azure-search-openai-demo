@@ -164,6 +164,7 @@ openai[datalib]==1.12.0
     # via
     #   -r requirements.in
     #   langfuse
+    # via -r requirements.in
 opentelemetry-api==1.23.0
     # via
     #   azure-core-tracing-opentelemetry
@@ -176,6 +177,7 @@ opentelemetry-api==1.23.0
     #   opentelemetry-instrumentation-fastapi
     #   opentelemetry-instrumentation-flask
     #   opentelemetry-instrumentation-httpx
+    #   opentelemetry-instrumentation-openai
     #   opentelemetry-instrumentation-psycopg2
     #   opentelemetry-instrumentation-requests
     #   opentelemetry-instrumentation-urllib
@@ -191,6 +193,7 @@ opentelemetry-instrumentation==0.44b0
     #   opentelemetry-instrumentation-fastapi
     #   opentelemetry-instrumentation-flask
     #   opentelemetry-instrumentation-httpx
+    #   opentelemetry-instrumentation-openai
     #   opentelemetry-instrumentation-psycopg2
     #   opentelemetry-instrumentation-requests
     #   opentelemetry-instrumentation-urllib
@@ -211,6 +214,8 @@ opentelemetry-instrumentation-fastapi==0.44b0
 opentelemetry-instrumentation-flask==0.44b0
     # via azure-monitor-opentelemetry
 opentelemetry-instrumentation-httpx==0.44b0
+    # via -r requirements.in
+opentelemetry-instrumentation-openai==0.12.5
     # via -r requirements.in
 opentelemetry-instrumentation-psycopg2==0.44b0
     # via azure-monitor-opentelemetry
@@ -246,6 +251,8 @@ opentelemetry-semantic-conventions==0.44b0
     #   opentelemetry-instrumentation-urllib3
     #   opentelemetry-instrumentation-wsgi
     #   opentelemetry-sdk
+opentelemetry-semantic-conventions-ai==0.0.20
+    # via opentelemetry-instrumentation-openai
 opentelemetry-util-http==0.44b0
     # via
     #   opentelemetry-instrumentation-aiohttp-client
