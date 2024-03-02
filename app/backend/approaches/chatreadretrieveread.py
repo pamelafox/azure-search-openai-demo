@@ -8,6 +8,7 @@ from openai.types.chat import (
     ChatCompletionChunk,
     ChatCompletionToolParam,
 )
+from pydantic import BaseModel, Field
 
 from approaches.approach import ThoughtStep
 from approaches.chatapproach import ChatApproach
@@ -95,39 +96,29 @@ class ChatReadRetrieveReadApproach(ChatApproach):
         original_user_query = history[-1]["content"]
         user_query_request = "Generate search query for: " + original_user_query
 
+        class search_sources(BaseModel):
+            search_query: str = Field(
+                description="Query string to retrieve documents from azure search eg: 'Health care plan'"
+            )
+
+        class search_by_filename(BaseModel):
+            filename: str = Field(description="The filename, like 'best-practices-for-openai-chat-apps.html'")
+
         tools: List[ChatCompletionToolParam] = [
             {
                 "type": "function",
                 "function": {
                     "name": "search_sources",
                     "description": "Retrieve sources from the Azure AI Search index",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "search_query": {
-                                "type": "string",
-                                "description": "Query string to retrieve documents from azure search eg: 'Health care plan'",
-                            }
-                        },
-                        "required": ["search_query"],
-                    },
+                    "parameters": search_sources.model_json_schema(),
                 },
             },
             {
                 "type": "function",
                 "function": {
                     "name": "search_by_filename",
-                    "description": "Retrieve a specific filename from the Azure AI Search index",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "filename": {
-                                "type": "string",
-                                "description": "The filename, like 'PerksPlus.pdf'",
-                            }
-                        },
-                        "required": ["filename"],
-                    },
+                    "description": "Retrieve a specific filename from the Azure AI Search index, should be called whenever user is specifically describing a certain filename in their question.",
+                    "parameters": search_by_filename.model_json_schema(),
                 },
             },
         ]
