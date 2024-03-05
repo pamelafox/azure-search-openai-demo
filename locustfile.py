@@ -18,10 +18,11 @@ class ChatUser(HttpUser):
                     {
                         "content": random.choice(
                             [
-                                "What is included in my Northwind Health Plus plan that is not in standard?",
-                                "What does a Product Manager do?",
-                                "What happens in a performance review?",
-                                "Whats your whistleblower policy?",
+                                "What does Pamela do?",
+                                "What are good sleep strategies?",
+                                "What Python frameworks can be deployed on Azure?",
+                                "Is it possible to mock the OpenAI SDK?",
+                                "Did Pamela graduate from USC?",
                             ]
                         ),
                         "role": "user",
@@ -43,12 +44,12 @@ class ChatUser(HttpUser):
             "/chat",
             json={
                 "messages": [
-                    {"content": "What happens in a performance review?", "role": "user"},
+                    {"content": "What does Pamela do?", "role": "user"},
                     {
-                        "content": "During a performance review, employees will receive feedback on their performance over the past year, including both successes and areas for improvement. The feedback will be provided by the employee's supervisor and is intended to help the employee develop and grow in their role [employee_handbook-3.pdf]. The review is a two-way dialogue between the employee and their manager, so employees are encouraged to be honest and open during the process [employee_handbook-3.pdf]. The employee will also have the opportunity to discuss their goals and objectives for the upcoming year [employee_handbook-3.pdf]. A written summary of the performance review will be provided to the employee, which will include a rating of their performance, feedback, and goals and objectives for the upcoming year [employee_handbook-3.pdf].",
+                        "content": "Pamela is currently a Principal Cloud Advocate at Microsoft, focusing on the ways that developers can use Python with Azure services[pamelafox.html]. In the past, she has worked as a lecturer at UC Berkeley, worked for Khan Academy, started up the engineering team at Woebot, attended a Tibetan Buddhism retreat, founded the GirlDevelopIt SF chapter, written code for Coursera, and worked in developer relations for Google [pamelafox.html]",
                         "role": "assistant",
                     },
-                    {"content": "Does my plan cover eye exams?", "role": "user"},
+                    {"content": "Did Pamela graduate from USC?", "role": "user"},
                 ],
                 "context": {
                     "overrides": {

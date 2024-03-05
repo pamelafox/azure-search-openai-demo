@@ -41,6 +41,9 @@ class LocalHTMLParser(Parser):
         data = content.read()
         soup = BeautifulSoup(data, "html.parser")
 
+        # get first div with class blog-posts
+        soup = soup.find("div", class_="blog-posts") or soup
+
         # Get text only from html file
         result = soup.get_text()
 
