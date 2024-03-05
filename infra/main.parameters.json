@@ -133,6 +133,15 @@
     },
     "runningOnAdo": {
       "value": "${TF_BUILD}"
+    },
+    "langfuseHost": {
+      "value": "${LANGFUSE_HOST}"
+    },
+    "langfuseSecretKey": {
+      "value": "${LANGFUSE_SECRET_KEY}"
+    },
+    "langfusePublicKey": {
+      "value": "${LANGFUSE_PUBLIC_KEY}"
     }
   }
 }

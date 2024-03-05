@@ -20,3 +20,4 @@ cryptography
 python-jose[cryptography]
 Pillow
 types-Pillow
+langfuse

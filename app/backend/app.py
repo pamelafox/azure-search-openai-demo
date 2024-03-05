@@ -16,7 +16,11 @@ from azure.monitor.opentelemetry import configure_azure_monitor
 from azure.search.documents.aio import SearchClient
 from azure.search.documents.indexes.aio import SearchIndexClient
 from azure.storage.blob.aio import BlobServiceClient
-from langfuse.openai import AsyncAzureOpenAI, AsyncOpenAI
+
+if os.getenv("LANGFUSE_HOST"):
+    from langfuse.openai import AsyncAzureOpenAI, AsyncOpenAI
+else:
+    from openai import AsyncAzureOpenAI, AsyncOpenAI
 from opentelemetry.instrumentation.aiohttp_client import AioHttpClientInstrumentor
 from opentelemetry.instrumentation.asgi import OpenTelemetryMiddleware
 from opentelemetry.instrumentation.httpx import (
@@ -418,8 +422,9 @@ def create_app():
         AioHttpClientInstrumentor().instrument()
         # This tracks HTTP requests made by httpx:
         HTTPXClientInstrumentor().instrument()
-        # This tracks OpenAI SDK requests:
-        OpenAIInstrumentor().instrument()
+        # This tracks OpenAI SDK requests - currently incompatible with Langfuse tracing:
+        if not os.getenv("LANGFUSE_HOST"):
+            OpenAIInstrumentor().instrument()
         # This middleware tracks app route requests:
         app.asgi_app = OpenTelemetryMiddleware(app.asgi_app)  # type: ignore[method-assign]
 

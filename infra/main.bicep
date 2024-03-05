@@ -138,6 +138,13 @@ param runningOnGh string = ''
 @description('Whether the deployment is running on Azure DevOps Pipeline')
 param runningOnAdo string = ''
 
+param langfuseHost string = ''
+@secure()
+param langfuseSecretKey string = ''
+@secure()
+param langfusePublicKey string = ''
+
+
 // Organize resources in a resource group
 resource resourceGroup 'Microsoft.Resources/resourceGroups@2021-04-01' = {
   name: !empty(resourceGroupName) ? resourceGroupName : '${abbrs.resourcesResourceGroups}${environmentName}'
@@ -207,6 +214,13 @@ module appServicePlan 'core/host/appserviceplan.bicep' = {
   }
 }
 
+// Optional Langfuse settings
+var langfuseSettings = !empty(langfuseHost) ? {
+  LANGFUSE_SECRET_KEY : langfuseSecretKey
+  LANGFUSE_PUBLIC_KEY : langfusePublicKey
+  LANGFUSE_HOST : langfuseHost
+} : {}
+
 // The application frontend
 module backend 'core/host/appservice.bicep' = {
   name: 'web'
@@ -228,7 +242,7 @@ module backend 'core/host/appservice.bicep' = {
     authenticationIssuerUri: authenticationIssuerUri
     use32BitWorkerProcess: appServiceSkuName == 'F1'
     alwaysOn: appServiceSkuName != 'F1'
-    appSettings: {
+    appSettings: union(langfuseSettings, {
       AZURE_STORAGE_ACCOUNT: storage.outputs.name
       AZURE_STORAGE_CONTAINER: storageContainerName
       AZURE_SEARCH_INDEX: searchIndexName
@@ -268,7 +282,7 @@ module backend 'core/host/appservice.bicep' = {
       ALLOWED_ORIGIN: allowedOrigin
       USE_VECTORS: useVectors
       USE_GPT4V: useGPT4V
-    }
+    })
   }
 }
 
