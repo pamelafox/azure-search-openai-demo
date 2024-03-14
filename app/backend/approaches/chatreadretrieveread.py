@@ -223,5 +223,6 @@ class ChatReadRetrieveReadApproach(ChatApproach):
             max_tokens=response_token_limit,
             n=1,
             stream=should_stream,
+            seed=1,
         )
         return (extra_info, chat_coroutine)
