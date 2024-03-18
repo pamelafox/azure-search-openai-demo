@@ -1,4 +1,4 @@
-import 'microsoftGraph@1.0.0'
+provider 'microsoftGraph@1.0.0'
 
 @description('Specifies the name of the key vault.')
 param keyVaultName string
@@ -109,12 +109,13 @@ resource createAddCertificate 'Microsoft.Resources/deploymentScripts@2020-10-01'
 
         Write-Host 'Certificate $certificateName in vault $vaultName is already present.'
 
-        $Secret = Get-AzKeyVaultSecret -VaultName $vaultName -Name $certificateName -AsPlainText
+        $Secret = Get-AzKeyVaultSecret -VaultName $vaultName -Name $certificateName
 
         $DeploymentScriptOutputs['certStart'] = $existingCert.notBefore
         $DeploymentScriptOutputs['certEnd'] = $existingCert.expires
         $DeploymentScriptOutputs['certThumbprint'] = $existingCert.Thumbprint
-        $DeploymentScriptOutputs['certKey'] = $Secret
+        $DeploymentScriptOutputs['certKey'] = ConvertFrom-SecureString $Secret.SecretValue
+        Write-Host 'Secret: ' $DeploymentScriptOutputs['certKey']
         $existingCert | Out-String
       }
       else {
@@ -149,7 +150,7 @@ resource createAddCertificate 'Microsoft.Resources/deploymentScripts@2020-10-01'
         $DeploymentScriptOutputs['certStart'] = $newCert.notBefore
         $DeploymentScriptOutputs['certEnd'] = $newCert.expires
         $DeploymentScriptOutputs['certThumbprint'] = $newCert.Thumbprint
-        $DeploymentScriptOutputs['certKey'] = $Secret.SecretValueText
+        $DeploymentScriptOutputs['certKey'] = ConvertFrom-SecureString $Secret.SecretValue
         $newCert | Out-String
       }
     '''
@@ -162,8 +163,8 @@ resource createAddCertificate 'Microsoft.Resources/deploymentScripts@2020-10-01'
 }
 
 resource clientApp 'Microsoft.Graph/applications@beta' = {
-  name: 'ExampleClientApp'
-  displayName: 'WebApp'
+  uniqueName: 'WebApp123'
+  displayName: 'Web App'
   signInAudience: 'AzureADandPersonalMicrosoftAccount'
   web: {
       redirectUris: [
