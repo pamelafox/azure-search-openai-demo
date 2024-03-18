@@ -163,14 +163,39 @@ resource createAddCertificate 'Microsoft.Resources/deploymentScripts@2020-10-01'
 
 resource clientApp 'Microsoft.Graph/applications@beta' = {
   uniqueName: 'WebApp123'
-  displayName: 'Web App'
-  signInAudience: 'AzureADandPersonalMicrosoftAccount'
+  displayName: 'Azure Search OpenAI Chat Client App TODO-123' // TODO: replace with a unique value
+  signInAudience: 'AzureADMyOrg'
   web: {
       redirectUris: [
         'http://localhost:5000/.auth/login/aad/callback'
       ]
       implicitGrantSettings: {enableIdTokenIssuance: true}
   }
+  spa: {
+    redirectUris: [
+      'http://localhost:50505/redirect'
+    ]
+  }
+  requiredResourceAccess: [
+    {
+      resourceAppId: serverAppId
+      resourceAccess: [
+        {
+          id: '7b207263-0c4a-4127-a6fe-38ea8c8cd1a7'
+          type: 'Scope'
+        }
+      ]
+    }
+    {
+      resourceAppId: '00000003-0000-0000-c000-000000000000'
+      resourceAccess: [
+        {
+          id: 'e1fe6dd8-ba31-4d61-89e7-88639da4683d'
+          type: 'Scope'
+        }
+      ]
+    }
+  ]
   keyCredentials: [
     {
       displayName: 'Example Client App Key Credential'

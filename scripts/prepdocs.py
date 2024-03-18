@@ -1,596 +1,225 @@
 import argparse
-import base64
-import glob
-import html
-import io
-import os
-import re
-import tempfile
-import time
+import asyncio
+import logging
+from typing import Optional, Union
 
-import openai
-import tiktoken
-from azure.ai.formrecognizer import DocumentAnalysisClient
 from azure.core.credentials import AzureKeyCredential
-from azure.identity import AzureDeveloperCliCredential
-from azure.search.documents import SearchClient
-from azure.search.documents.indexes import SearchIndexClient
-from azure.search.documents.indexes.models import (
-    HnswParameters,
-    PrioritizedFields,
-    SearchableField,
-    SearchField,
-    SearchFieldDataType,
-    SearchIndex,
-    SemanticConfiguration,
-    SemanticField,
-    SemanticSettings,
-    SimpleField,
-    VectorSearch,
-    VectorSearchAlgorithmConfiguration,
+from azure.core.credentials_async import AsyncTokenCredential
+from azure.identity.aio import AzureDeveloperCliCredential, get_bearer_token_provider
+from azure.keyvault.secrets.aio import SecretClient
+
+from prepdocslib.blobmanager import BlobManager
+from prepdocslib.embeddings import (
+    AzureOpenAIEmbeddingService,
+    ImageEmbeddings,
+    OpenAIEmbeddingService,
 )
-from azure.storage.blob import BlobServiceClient
-from azure.storage.filedatalake import (
-    DataLakeServiceClient,
+from prepdocslib.fileprocessor import FileProcessor
+from prepdocslib.filestrategy import FileStrategy
+from prepdocslib.htmlparser import LocalHTMLParser
+from prepdocslib.integratedvectorizerstrategy import (
+    IntegratedVectorizerStrategy,
 )
-from pypdf import PdfReader, PdfWriter
-from tenacity import (
-    retry,
-    retry_if_exception_type,
-    stop_after_attempt,
-    wait_random_exponential,
+from prepdocslib.jsonparser import JsonParser
+from prepdocslib.listfilestrategy import (
+    ADLSGen2ListFileStrategy,
+    ListFileStrategy,
+    LocalListFileStrategy,
 )
+from prepdocslib.parser import Parser
+from prepdocslib.pdfparser import DocumentAnalysisParser, LocalPdfParser
+from prepdocslib.strategy import DocumentAction, SearchInfo, Strategy
+from prepdocslib.textparser import TextParser
+from prepdocslib.textsplitter import SentenceTextSplitter, SimpleTextSplitter
 
-args = argparse.Namespace(
-    verbose=False,
-    openaihost="azure",
-    datalakestorageaccount=None,
-    datalakefilesystem=None,
-    datalakepath=None,
-    remove=False,
-    useacls=False,
-    skipblobs=False,
-    storageaccount=None,
-    container=None,
-)
-adls_gen2_creds = None
-storage_creds = None
-
-MAX_SECTION_LENGTH = 1000
-SENTENCE_SEARCH_LIMIT = 100
-SECTION_OVERLAP = 100
-
-open_ai_token_cache = {}
-CACHE_KEY_TOKEN_CRED = "openai_token_cred"
-CACHE_KEY_CREATED_TIME = "created_time"
-CACHE_KEY_TOKEN_TYPE = "token_type"
-
-# Embedding batch support section
-SUPPORTED_BATCH_AOAI_MODEL = {"text-embedding-ada-002": {"token_limit": 8100, "max_batch_size": 16}}
+logger = logging.getLogger("ingester")
 
 
-def calculate_tokens_emb_aoai(input: str):
-    encoding = tiktoken.encoding_for_model(args.openaimodelname)
-    return len(encoding.encode(input))
+def clean_key_if_exists(key: Union[str, None]) -> Union[str, None]:
+    """Remove leading and trailing whitespace from a key if it exists. If the key is empty, return None."""
+    if key is not None and key.strip() != "":
+        return key.strip()
+    return None
 
 
-def blob_name_from_file_page(filename, page=0):
-    if os.path.splitext(filename)[1].lower() == ".pdf":
-        return os.path.splitext(os.path.basename(filename))[0] + f"-{page}" + ".pdf"
-    else:
-        return os.path.basename(filename)
+async def setup_search_info(
+    search_service: str,
+    index_name: str,
+    azure_credential: AsyncTokenCredential,
+    search_key: Union[str, None] = None,
+    key_vault_name: Union[str, None] = None,
+    search_secret_name: Union[str, None] = None,
+) -> SearchInfo:
+    if key_vault_name and search_secret_name:
+        async with SecretClient(
+            vault_url=f"https://{key_vault_name}.vault.azure.net", credential=azure_credential
+        ) as key_vault_client:
+            search_key = (await key_vault_client.get_secret(search_secret_name)).value  # type: ignore[attr-defined]
 
-
-def upload_blobs(filename):
-    blob_service = BlobServiceClient(
-        account_url=f"https://{args.storageaccount}.blob.core.windows.net", credential=storage_creds
+    search_creds: Union[AsyncTokenCredential, AzureKeyCredential] = (
+        azure_credential if search_key is None else AzureKeyCredential(search_key)
     )
-    blob_container = blob_service.get_container_client(args.container)
-    if not blob_container.exists():
-        blob_container.create_container()
 
-    # if file is PDF split into pages and upload each page as a separate blob
-    if os.path.splitext(filename)[1].lower() == ".pdf":
-        reader = PdfReader(filename)
-        pages = reader.pages
-        for i in range(len(pages)):
-            blob_name = blob_name_from_file_page(filename, i)
-            if args.verbose:
-                print(f"\tUploading blob for page {i} -> {blob_name}")
-            f = io.BytesIO()
-            writer = PdfWriter()
-            writer.add_page(pages[i])
-            writer.write(f)
-            f.seek(0)
-            blob_container.upload_blob(blob_name, f, overwrite=True)
-    else:
-        blob_name = blob_name_from_file_page(filename)
-        with open(filename, "rb") as data:
-            blob_container.upload_blob(blob_name, data, overwrite=True)
-
-
-def remove_blobs(filename):
-    if args.verbose:
-        print(f"Removing blobs for '{filename or '<all>'}'")
-    blob_service = BlobServiceClient(
-        account_url=f"https://{args.storageaccount}.blob.core.windows.net", credential=storage_creds
+    return SearchInfo(
+        endpoint=f"https://{search_service}.search.windows.net/",
+        credential=search_creds,
+        index_name=index_name,
     )
-    blob_container = blob_service.get_container_client(args.container)
-    if blob_container.exists():
-        if filename is None:
-            blobs = blob_container.list_blob_names()
-        else:
-            prefix = os.path.splitext(os.path.basename(filename))[0]
-            blobs = filter(
-                lambda b: re.match(f"{prefix}-\d+\.pdf", b),
-                blob_container.list_blob_names(name_starts_with=os.path.splitext(os.path.basename(prefix))[0]),
-            )
-        for b in blobs:
-            if args.verbose:
-                print(f"\tRemoving blob {b}")
-            blob_container.delete_blob(b)
 
 
-def table_to_html(table):
-    table_html = "<table>"
-    rows = [
-        sorted([cell for cell in table.cells if cell.row_index == i], key=lambda cell: cell.column_index)
-        for i in range(table.row_count)
-    ]
-    for row_cells in rows:
-        table_html += "<tr>"
-        for cell in row_cells:
-            tag = "th" if (cell.kind == "columnHeader" or cell.kind == "rowHeader") else "td"
-            cell_spans = ""
-            if cell.column_span > 1:
-                cell_spans += f" colSpan={cell.column_span}"
-            if cell.row_span > 1:
-                cell_spans += f" rowSpan={cell.row_span}"
-            table_html += f"<{tag}{cell_spans}>{html.escape(cell.content)}</{tag}>"
-        table_html += "</tr>"
-    table_html += "</table>"
-    return table_html
-
-
-def get_document_text(filename):
-    offset = 0
-    page_map = []
-    if args.localpdfparser:
-        reader = PdfReader(filename)
-        pages = reader.pages
-        for page_num, p in enumerate(pages):
-            page_text = p.extract_text()
-            page_map.append((page_num, offset, page_text))
-            offset += len(page_text)
-    else:
-        if args.verbose:
-            print(f"Extracting text from '{filename}' using Azure Form Recognizer")
-        form_recognizer_client = DocumentAnalysisClient(
-            endpoint=f"https://{args.formrecognizerservice}.cognitiveservices.azure.com/",
-            credential=formrecognizer_creds,
-            headers={"x-ms-useragent": "azure-search-chat-demo/1.0.0"},
-        )
-        with open(filename, "rb") as f:
-            poller = form_recognizer_client.begin_analyze_document("prebuilt-layout", document=f)
-        form_recognizer_results = poller.result()
-
-        for page_num, page in enumerate(form_recognizer_results.pages):
-            tables_on_page = [
-                table
-                for table in form_recognizer_results.tables
-                if table.bounding_regions[0].page_number == page_num + 1
-            ]
-
-            # mark all positions of the table spans in the page
-            page_offset = page.spans[0].offset
-            page_length = page.spans[0].length
-            table_chars = [-1] * page_length
-            for table_id, table in enumerate(tables_on_page):
-                for span in table.spans:
-                    # replace all table spans with "table_id" in table_chars array
-                    for i in range(span.length):
-                        idx = span.offset - page_offset + i
-                        if idx >= 0 and idx < page_length:
-                            table_chars[idx] = table_id
-
-            # build page text by replacing characters in table spans with table html
-            page_text = ""
-            added_tables = set()
-            for idx, table_id in enumerate(table_chars):
-                if table_id == -1:
-                    page_text += form_recognizer_results.content[page_offset + idx]
-                elif table_id not in added_tables:
-                    page_text += table_to_html(tables_on_page[table_id])
-                    added_tables.add(table_id)
-
-            page_text += " "
-            page_map.append((page_num, offset, page_text))
-            offset += len(page_text)
-
-    return page_map
-
-
-def split_text(page_map, filename):
-    SENTENCE_ENDINGS = [".", "!", "?"]
-    WORDS_BREAKS = [",", ";", ":", " ", "(", ")", "[", "]", "{", "}", "\t", "\n"]
-    if args.verbose:
-        print(f"Splitting '{filename}' into sections")
-
-    def find_page(offset):
-        num_pages = len(page_map)
-        for i in range(num_pages - 1):
-            if offset >= page_map[i][1] and offset < page_map[i + 1][1]:
-                return i
-        return num_pages - 1
-
-    all_text = "".join(p[2] for p in page_map)
-    length = len(all_text)
-    start = 0
-    end = length
-    while start + SECTION_OVERLAP < length:
-        last_word = -1
-        end = start + MAX_SECTION_LENGTH
-
-        if end > length:
-            end = length
-        else:
-            # Try to find the end of the sentence
-            while (
-                end < length
-                and (end - start - MAX_SECTION_LENGTH) < SENTENCE_SEARCH_LIMIT
-                and all_text[end] not in SENTENCE_ENDINGS
-            ):
-                if all_text[end] in WORDS_BREAKS:
-                    last_word = end
-                end += 1
-            if end < length and all_text[end] not in SENTENCE_ENDINGS and last_word > 0:
-                end = last_word  # Fall back to at least keeping a whole word
-        if end < length:
-            end += 1
-
-        # Try to find the start of the sentence or at least a whole word boundary
-        last_word = -1
-        while (
-            start > 0
-            and start > end - MAX_SECTION_LENGTH - 2 * SENTENCE_SEARCH_LIMIT
-            and all_text[start] not in SENTENCE_ENDINGS
-        ):
-            if all_text[start] in WORDS_BREAKS:
-                last_word = start
-            start -= 1
-        if all_text[start] not in SENTENCE_ENDINGS and last_word > 0:
-            start = last_word
-        if start > 0:
-            start += 1
-
-        section_text = all_text[start:end]
-        yield (section_text, find_page(start))
-
-        last_table_start = section_text.rfind("<table")
-        if last_table_start > 2 * SENTENCE_SEARCH_LIMIT and last_table_start > section_text.rfind("</table"):
-            # If the section ends with an unclosed table, we need to start the next section with the table.
-            # If table starts inside SENTENCE_SEARCH_LIMIT, we ignore it, as that will cause an infinite loop for tables longer than MAX_SECTION_LENGTH
-            # If last table starts inside SECTION_OVERLAP, keep overlapping
-            if args.verbose:
-                print(
-                    f"Section ends with unclosed table, starting next section with the table at page {find_page(start)} offset {start} table start {last_table_start}"
-                )
-            start = min(end - SECTION_OVERLAP, start + last_table_start)
-        else:
-            start = end - SECTION_OVERLAP
-
-    if start + SECTION_OVERLAP < end:
-        yield (all_text[start:end], find_page(start))
-
-
-def filename_to_id(filename):
-    filename_ascii = re.sub("[^0-9a-zA-Z_-]", "_", filename)
-    filename_hash = base64.b16encode(filename.encode("utf-8")).decode("ascii")
-    return f"file-{filename_ascii}-{filename_hash}"
-
-
-def create_sections(filename, page_map, use_vectors, embedding_deployment: str = None, embedding_model: str = None):
-    file_id = filename_to_id(filename)
-    for i, (content, pagenum) in enumerate(split_text(page_map, filename)):
-        section = {
-            "id": f"{file_id}-page-{i}",
-            "content": content,
-            "category": args.category,
-            "sourcepage": blob_name_from_file_page(filename, pagenum),
-            "sourcefile": filename,
-        }
-        if use_vectors:
-            section["embedding"] = compute_embedding(content, embedding_deployment, embedding_model)
-        yield section
-
-
-def before_retry_sleep(retry_state):
-    if args.verbose:
-        print("Rate limited on the OpenAI embeddings API, sleeping before retrying...")
-
-
-@retry(
-    retry=retry_if_exception_type(openai.error.RateLimitError),
-    wait=wait_random_exponential(min=15, max=60),
-    stop=stop_after_attempt(15),
-    before_sleep=before_retry_sleep,
-)
-def compute_embedding(text, embedding_deployment, embedding_model):
-    refresh_openai_token()
-    embedding_args = {"deployment_id": embedding_deployment} if args.openaihost != "openai" else {}
-    return openai.Embedding.create(**embedding_args, model=embedding_model, input=text)["data"][0]["embedding"]
-
-
-@retry(
-    retry=retry_if_exception_type(openai.error.RateLimitError),
-    wait=wait_random_exponential(min=15, max=60),
-    stop=stop_after_attempt(15),
-    before_sleep=before_retry_sleep,
-)
-def compute_embedding_in_batch(texts):
-    refresh_openai_token()
-    embedding_args = {"deployment_id": args.openaideployment} if args.openaihost != "openai" else {}
-    emb_response = openai.Embedding.create(**embedding_args, model=args.openaimodelname, input=texts)
-    return [data.embedding for data in emb_response.data]
-
-
-def create_search_index():
-    if args.verbose:
-        print(f"Ensuring search index {args.index} exists")
-    index_client = SearchIndexClient(
-        endpoint=f"https://{args.searchservice}.search.windows.net/", credential=search_creds
-    )
-    fields = [
-        SimpleField(name="id", type="Edm.String", key=True),
-        SearchableField(name="content", type="Edm.String", analyzer_name="en.microsoft"),
-        SearchField(
-            name="embedding",
-            type=SearchFieldDataType.Collection(SearchFieldDataType.Single),
-            hidden=False,
-            searchable=True,
-            filterable=False,
-            sortable=False,
-            facetable=False,
-            vector_search_dimensions=1536,
-            vector_search_configuration="default",
-        ),
-        SimpleField(name="category", type="Edm.String", filterable=True, facetable=True),
-        SimpleField(name="sourcepage", type="Edm.String", filterable=True, facetable=True),
-        SimpleField(name="sourcefile", type="Edm.String", filterable=True, facetable=True),
-    ]
-    if args.useacls:
-        fields.append(
-            SimpleField(name="oids", type=SearchFieldDataType.Collection(SearchFieldDataType.String), filterable=True)
-        )
-        fields.append(
-            SimpleField(name="groups", type=SearchFieldDataType.Collection(SearchFieldDataType.String), filterable=True)
-        )
-
-    if args.index not in index_client.list_index_names():
-        index = SearchIndex(
-            name=args.index,
-            fields=fields,
-            semantic_settings=SemanticSettings(
-                configurations=[
-                    SemanticConfiguration(
-                        name="default",
-                        prioritized_fields=PrioritizedFields(
-                            title_field=None, prioritized_content_fields=[SemanticField(field_name="content")]
-                        ),
-                    )
-                ]
-            ),
-            vector_search=VectorSearch(
-                algorithm_configurations=[
-                    VectorSearchAlgorithmConfiguration(
-                        name="default", kind="hnsw", hnsw_parameters=HnswParameters(metric="cosine")
-                    )
-                ]
-            ),
-        )
-        if args.verbose:
-            print(f"Creating {args.index} search index")
-        index_client.create_index(index)
-    else:
-        if args.verbose:
-            print(f"Search index {args.index} already exists")
-
-
-def update_embeddings_in_batch(sections):
-    batch_queue = []
-    copy_s = []
-    batch_response = {}
-    token_count = 0
-    for s in sections:
-        token_count += calculate_tokens_emb_aoai(s["content"])
-        if (
-            token_count <= SUPPORTED_BATCH_AOAI_MODEL[args.openaimodelname]["token_limit"]
-            and len(batch_queue) < SUPPORTED_BATCH_AOAI_MODEL[args.openaimodelname]["max_batch_size"]
-        ):
-            batch_queue.append(s)
-            copy_s.append(s)
-        else:
-            emb_responses = compute_embedding_in_batch([item["content"] for item in batch_queue])
-            if args.verbose:
-                print(f"Batch Completed. Batch size  {len(batch_queue)} Token count {token_count}")
-            for emb, item in zip(emb_responses, batch_queue):
-                batch_response[item["id"]] = emb
-            batch_queue = []
-            batch_queue.append(s)
-            token_count = calculate_tokens_emb_aoai(s["content"])
-
-    if batch_queue:
-        emb_responses = compute_embedding_in_batch([item["content"] for item in batch_queue])
-        if args.verbose:
-            print(f"Batch Completed. Batch size  {len(batch_queue)} Token count {token_count}")
-        for emb, item in zip(emb_responses, batch_queue):
-            batch_response[item["id"]] = emb
-
-    for s in copy_s:
-        s["embedding"] = batch_response[s["id"]]
-        yield s
-
-
-def index_sections(filename, sections, acls=None):
-    if args.verbose:
-        print(f"Indexing sections from '{filename}' into search index '{args.index}'")
-    search_client = SearchClient(
-        endpoint=f"https://{args.searchservice}.search.windows.net/", index_name=args.index, credential=search_creds
-    )
-    i = 0
-    batch = []
-    for s in sections:
-        if acls:
-            s.update(acls)
-        batch.append(s)
-        i += 1
-        if i % 1000 == 0:
-            results = search_client.upload_documents(documents=batch)
-            succeeded = sum([1 for r in results if r.succeeded])
-            if args.verbose:
-                print(f"\tIndexed {len(results)} sections, {succeeded} succeeded")
-            batch = []
-
-    if len(batch) > 0:
-        results = search_client.upload_documents(documents=batch)
-        succeeded = sum([1 for r in results if r.succeeded])
-        if args.verbose:
-            print(f"\tIndexed {len(results)} sections, {succeeded} succeeded")
-
-
-def remove_from_index(filename):
-    if args.verbose:
-        print(f"Removing sections from '{filename or '<all>'}' from search index '{args.index}'")
-    search_client = SearchClient(
-        endpoint=f"https://{args.searchservice}.search.windows.net/", index_name=args.index, credential=search_creds
-    )
-    while True:
-        filter = None if filename is None else f"sourcefile eq '{os.path.basename(filename)}'"
-        r = search_client.search("", filter=filter, top=1000, include_total_count=True)
-        if r.get_count() == 0:
-            break
-        r = search_client.delete_documents(documents=[{"id": d["id"]} for d in r])
-        if args.verbose:
-            print(f"\tRemoved {len(r)} sections from index")
-        # It can take a few seconds for search results to reflect changes, so wait a bit
-        time.sleep(2)
-
-
-def refresh_openai_token():
-    """
-    Refresh OpenAI token every 5 minutes
-    """
-    if (
-        CACHE_KEY_TOKEN_TYPE in open_ai_token_cache
-        and open_ai_token_cache[CACHE_KEY_TOKEN_TYPE] == "azure_ad"
-        and open_ai_token_cache[CACHE_KEY_CREATED_TIME] + 300 < time.time()
-    ):
-        token_cred = open_ai_token_cache[CACHE_KEY_TOKEN_CRED]
-        openai.api_key = token_cred.get_token("https://cognitiveservices.azure.com/.default").token
-        open_ai_token_cache[CACHE_KEY_CREATED_TIME] = time.time()
-
-
-def read_files(
-    path_pattern: str,
-    use_vectors: bool,
-    vectors_batch_support: bool,
-    embedding_deployment: str = None,
-    embedding_model: str = None,
+def setup_blob_manager(
+    azure_credential: AsyncTokenCredential,
+    storage_account: str,
+    storage_container: str,
+    storage_resource_group: str,
+    subscription_id: str,
+    search_images: bool,
+    storage_key: Union[str, None] = None,
 ):
-    """
-    Recursively read directory structure under `path_pattern`
-    and execute indexing for the individual files
-    """
-    for filename in glob.glob(path_pattern):
-        if args.verbose:
-            print(f"Processing '{filename}'")
-        if args.remove:
-            remove_blobs(filename)
-            remove_from_index(filename)
-        else:
-            if os.path.isdir(filename):
-                read_files(filename + "/*", use_vectors, vectors_batch_support)
-                continue
-            try:
-                if not args.skipblobs:
-                    upload_blobs(filename)
-                page_map = get_document_text(filename)
-                sections = create_sections(
-                    os.path.basename(filename),
-                    page_map,
-                    use_vectors and not vectors_batch_support,
-                    embedding_deployment,
-                    embedding_model,
-                )
-                if use_vectors and vectors_batch_support:
-                    sections = update_embeddings_in_batch(sections)
-                index_sections(os.path.basename(filename), sections)
-            except Exception as e:
-                print(f"\tGot an error while reading {filename} -> {e} --> skipping file")
-
-
-def read_adls_gen2_files(
-    use_vectors: bool, vectors_batch_support: bool, embedding_deployment: str = None, embedding_model: str = None
-):
-    datalake_service = DataLakeServiceClient(
-        account_url=f"https://{args.datalakestorageaccount}.dfs.core.windows.net", credential=adls_gen2_creds
+    storage_creds: Union[AsyncTokenCredential, str] = azure_credential if storage_key is None else storage_key
+    return BlobManager(
+        endpoint=f"https://{storage_account}.blob.core.windows.net",
+        container=storage_container,
+        account=storage_account,
+        credential=storage_creds,
+        resourceGroup=storage_resource_group,
+        subscriptionId=subscription_id,
+        store_page_images=search_images,
     )
-    filesystem_client = datalake_service.get_file_system_client(file_system=args.datalakefilesystem)
-    paths = filesystem_client.get_paths(path=args.datalakepath, recursive=True)
-    for path in paths:
-        if not path.is_directory:
-            if args.remove:
-                remove_blobs(path.name)
-                remove_from_index(path.name)
-            else:
-                temp_file_path = os.path.join(tempfile.gettempdir(), os.path.basename(path.name))
-                try:
-                    temp_file = open(temp_file_path, "wb")
-                    file_client = filesystem_client.get_file_client(path)
-                    file_client.download_file().readinto(temp_file)
 
-                    acls = None
-                    if args.useacls:
-                        # Parse out user ids and group ids
-                        acls = {"oids": [], "groups": []}
-                        # https://learn.microsoft.com/python/api/azure-storage-file-datalake/azure.storage.filedatalake.datalakefileclient?view=azure-python#azure-storage-filedatalake-datalakefileclient-get-access-control
-                        # Request ACLs as GUIDs
-                        acl_list = file_client.get_access_control(upn=False)["acl"]
-                        # https://learn.microsoft.com/azure/storage/blobs/data-lake-storage-access-control
-                        # ACL Format: user::rwx,group::r-x,other::r--,user:xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx:r--
-                        acl_list = acl_list.split(",")
-                        for acl in acl_list:
-                            acl_parts = acl.split(":")
-                            if len(acl_parts) != 3:
-                                continue
-                            if len(acl_parts[1]) == 0:
-                                continue
-                            if acl_parts[0] == "user" and "r" in acl_parts[2]:
-                                acls["oids"].append(acl_parts[1])
-                            if acl_parts[0] == "group" and "r" in acl_parts[2]:
-                                acls["groups"].append(acl_parts[1])
 
-                    if not args.skipblobs:
-                        upload_blobs(temp_file.name)
-                    page_map = get_document_text(temp_file.name)
-                    sections = create_sections(
-                        os.path.basename(path.name),
-                        page_map,
-                        use_vectors and not vectors_batch_support,
-                        embedding_deployment,
-                        embedding_model,
-                    )
-                    if use_vectors and vectors_batch_support:
-                        sections = update_embeddings_in_batch(sections)
-                    index_sections(os.path.basename(path.name), sections, acls)
-                except Exception as e:
-                    print(f"\tGot an error while reading {path.name} -> {e} --> skipping file")
-                finally:
-                    try:
-                        temp_file.close()
-                        os.remove(temp_file_path)
-                    except Exception as e:
-                        print(f"\tGot an error while deleting {temp_file_path} -> {e}")
+def setup_list_file_strategy(
+    azure_credential: AsyncTokenCredential,
+    local_files: Union[str, None],
+    datalake_storage_account: Union[str, None],
+    datalake_filesystem: Union[str, None],
+    datalake_path: Union[str, None],
+    datalake_key: Union[str, None],
+):
+    list_file_strategy: ListFileStrategy
+    if datalake_storage_account:
+        if datalake_filesystem is None or datalake_path is None:
+            raise ValueError("DataLake file system and path are required when using Azure Data Lake Gen2")
+        adls_gen2_creds: Union[AsyncTokenCredential, str] = azure_credential if datalake_key is None else datalake_key
+        logger.info("Using Data Lake Gen2 Storage Account: %s", datalake_storage_account)
+        list_file_strategy = ADLSGen2ListFileStrategy(
+            data_lake_storage_account=datalake_storage_account,
+            data_lake_filesystem=datalake_filesystem,
+            data_lake_path=datalake_path,
+            credential=adls_gen2_creds,
+        )
+    elif local_files:
+        logger.info("Using local files: %s", local_files)
+        list_file_strategy = LocalListFileStrategy(path_pattern=local_files)
+    else:
+        raise ValueError("Either local_files or datalake_storage_account must be provided.")
+    return list_file_strategy
+
+
+def setup_embeddings_service(
+    azure_credential: AsyncTokenCredential,
+    openai_host: str,
+    openai_model_name: str,
+    openai_service: str,
+    openai_deployment: str,
+    openai_key: Union[str, None],
+    openai_org: Union[str, None],
+    disable_vectors: bool = False,
+    disable_batch_vectors: bool = False,
+):
+    if disable_vectors:
+        logger.info("Not setting up embeddings service")
+        return None
+
+    if openai_host != "openai":
+        azure_open_ai_credential: Union[AsyncTokenCredential, AzureKeyCredential] = (
+            azure_credential if openai_key is None else AzureKeyCredential(openai_key)
+        )
+        return AzureOpenAIEmbeddingService(
+            open_ai_service=openai_service,
+            open_ai_deployment=openai_deployment,
+            open_ai_model_name=openai_model_name,
+            credential=azure_open_ai_credential,
+            disable_batch=disable_batch_vectors,
+        )
+    else:
+        if openai_key is None:
+            raise ValueError("OpenAI key is required when using the non-Azure OpenAI API")
+        return OpenAIEmbeddingService(
+            open_ai_model_name=openai_model_name,
+            credential=openai_key,
+            organization=openai_org,
+            disable_batch=disable_batch_vectors,
+        )
+
+
+def setup_file_processors(
+    azure_credential: AsyncTokenCredential,
+    document_intelligence_service: Union[str, None],
+    document_intelligence_key: Union[str, None] = None,
+    local_pdf_parser: bool = False,
+    local_html_parser: bool = False,
+    search_images: bool = False,
+):
+    html_parser: Parser
+    pdf_parser: Parser
+    doc_int_parser: DocumentAnalysisParser
+
+    # check if Azure Document Intelligence credentials are provided
+    if document_intelligence_service is not None:
+        documentintelligence_creds: Union[AsyncTokenCredential, AzureKeyCredential] = (
+            azure_credential if document_intelligence_key is None else AzureKeyCredential(document_intelligence_key)
+        )
+        doc_int_parser = DocumentAnalysisParser(
+            endpoint=f"https://{document_intelligence_service}.cognitiveservices.azure.com/",
+            credential=documentintelligence_creds,
+        )
+    if local_pdf_parser or document_intelligence_service is None:
+        pdf_parser = LocalPdfParser()
+    else:
+        pdf_parser = doc_int_parser
+    if local_html_parser or document_intelligence_service is None:
+        html_parser = LocalHTMLParser()
+    else:
+        html_parser = doc_int_parser
+    sentence_text_splitter = SentenceTextSplitter(has_image_embeddings=search_images)
+    return {
+        ".pdf": FileProcessor(pdf_parser, sentence_text_splitter),
+        ".html": FileProcessor(html_parser, sentence_text_splitter),
+        ".json": FileProcessor(JsonParser(), SimpleTextSplitter()),
+        ".docx": FileProcessor(doc_int_parser, sentence_text_splitter),
+        ".pptx": FileProcessor(doc_int_parser, sentence_text_splitter),
+        ".xlsx": FileProcessor(doc_int_parser, sentence_text_splitter),
+        ".png": FileProcessor(doc_int_parser, sentence_text_splitter),
+        ".jpg": FileProcessor(doc_int_parser, sentence_text_splitter),
+        ".jpeg": FileProcessor(doc_int_parser, sentence_text_splitter),
+        ".tiff": FileProcessor(doc_int_parser, sentence_text_splitter),
+        ".bmp": FileProcessor(doc_int_parser, sentence_text_splitter),
+        ".heic": FileProcessor(doc_int_parser, sentence_text_splitter),
+        ".md": FileProcessor(TextParser(), sentence_text_splitter),
+        ".txt": FileProcessor(TextParser(), sentence_text_splitter),
+    }
+
+
+def setup_image_embeddings_service(
+    azure_credential: AsyncTokenCredential, vision_endpoint: Union[str, None], search_images: bool
+) -> Union[ImageEmbeddings, None]:
+    image_embeddings_service: Optional[ImageEmbeddings] = None
+    if search_images:
+        if vision_endpoint is None:
+            raise ValueError("A computer vision endpoint is required when GPT-4-vision is enabled.")
+        image_embeddings_service = ImageEmbeddings(
+            endpoint=vision_endpoint,
+            token_provider=get_bearer_token_provider(azure_credential, "https://cognitiveservices.azure.com/.default"),
+        )
+    return image_embeddings_service
+
+
+async def main(strategy: Strategy, setup_index: bool = True):
+    if setup_index:
+        await strategy.setup()
+
+    await strategy.run()
 
 
 if __name__ == "__main__":
@@ -627,6 +256,7 @@ if __name__ == "__main__":
     )
     parser.add_argument("--storageaccount", help="Azure Blob Storage account name")
     parser.add_argument("--container", help="Azure Blob Storage container name")
+    parser.add_argument("--storageresourcegroup", help="Azure blob storage resource group")
     parser.add_argument(
         "--storagekey",
         required=False,
@@ -636,17 +266,38 @@ if __name__ == "__main__":
         "--tenantid", required=False, help="Optional. Use this to define the Azure directory where to authenticate)"
     )
     parser.add_argument(
+        "--subscriptionid",
+        required=False,
+        help="Optional. Use this to define managed identity connection string in integrated vectorization",
+    )
+    parser.add_argument(
         "--searchservice",
-        help="Name of the Azure Cognitive Search service where content should be indexed (must exist already)",
+        help="Name of the Azure AI Search service where content should be indexed (must exist already)",
+    )
+    parser.add_argument(
+        "--searchserviceassignedid",
+        required=False,
+        help="Search service system assigned Identity (Managed identity) (used for integrated vectorization)",
     )
     parser.add_argument(
         "--index",
-        help="Name of the Azure Cognitive Search index where content should be indexed (will be created if it doesn't exist)",
+        help="Name of the Azure AI Search index where content should be indexed (will be created if it doesn't exist)",
     )
     parser.add_argument(
         "--searchkey",
         required=False,
-        help="Optional. Use this Azure Cognitive Search account key instead of the current user identity to login (use az login to set current user for Azure)",
+        help="Optional. Use this Azure AI Search account key instead of the current user identity to login (use az login to set current user for Azure)",
+    )
+    parser.add_argument(
+        "--searchsecretname",
+        required=False,
+        help="Required if searchkey is not provided and search service is free sku. Fetch the Azure AI Vision key from this keyvault instead of the instead of the current user identity to login (use az login to set current user for Azure)",
+    )
+    parser.add_argument(
+        "--searchanalyzername",
+        required=False,
+        default="en.microsoft",
+        help="Optional. Name of the Azure AI Search analyzer to use for the content field in the index",
     )
     parser.add_argument("--openaihost", help="Host of the API used to compute embeddings ('azure' or 'openai')")
     parser.add_argument("--openaiservice", help="Name of the Azure OpenAI service used to compute embeddings")
@@ -684,21 +335,54 @@ if __name__ == "__main__":
     parser.add_argument(
         "--localpdfparser",
         action="store_true",
-        help="Use PyPdf local PDF parser (supports only digital PDFs) instead of Azure Form Recognizer service to extract text, tables and layout from the documents",
+        help="Use PyPdf local PDF parser (supports only digital PDFs) instead of Azure Document Intelligence service to extract text, tables and layout from the documents",
     )
     parser.add_argument(
-        "--formrecognizerservice",
-        required=False,
-        help="Optional. Name of the Azure Form Recognizer service which will be used to extract text, tables and layout from the documents (must exist already)",
+        "--localhtmlparser",
+        action="store_true",
+        help="Use Beautiful soap local HTML parser instead of Azure Document Intelligence service to extract text, tables and layout from the documents",
     )
     parser.add_argument(
-        "--formrecognizerkey",
+        "--documentintelligenceservice",
         required=False,
-        help="Optional. Use this Azure Form Recognizer account key instead of the current user identity to login (use az login to set current user for Azure)",
+        help="Optional. Name of the Azure Document Intelligence service which will be used to extract text, tables and layout from the documents (must exist already)",
     )
-
+    parser.add_argument(
+        "--documentintelligencekey",
+        required=False,
+        help="Optional. Use this Azure Document Intelligence account key instead of the current user identity to login (use az login to set current user for Azure)",
+    )
+    parser.add_argument(
+        "--searchimages",
+        action="store_true",
+        required=False,
+        help="Optional. Generate image embeddings to enable each page to be searched as an image",
+    )
+    parser.add_argument(
+        "--visionendpoint",
+        required=False,
+        help="Optional, required if --searchimages is specified. Endpoint of Azure AI Vision service to use when embedding images.",
+    )
+    parser.add_argument(
+        "--keyvaultname",
+        required=False,
+        help="Required only if any keys must be fetched from the key vault.",
+    )
+    parser.add_argument(
+        "--useintvectorization",
+        required=False,
+        help="Required if --useintvectorization is specified. Enable Integrated vectorizer indexer support which is in preview)",
+    )
     parser.add_argument("--verbose", "-v", action="store_true", help="Verbose output")
     args = parser.parse_args()
+
+    if args.verbose:
+        logging.basicConfig(format="%(message)s")
+        # We only set the level to INFO for our logger,
+        # to avoid seeing the noisy INFO level logs from the Azure SDKs
+        logger.setLevel(logging.INFO)
+
+    use_int_vectorization = args.useintvectorization and args.useintvectorization.lower() == "true"
 
     # Use the current user identity to connect to Azure services unless a key is explicitly set for any of them
     azd_credential = (
@@ -706,55 +390,95 @@ if __name__ == "__main__":
         if args.tenantid is None
         else AzureDeveloperCliCredential(tenant_id=args.tenantid, process_timeout=60)
     )
-    default_creds = azd_credential if args.searchkey is None or args.storagekey is None else None
-    adls_gen2_creds = azd_credential if args.datalakekey is None else AzureKeyCredential(args.datalakekey)
-    search_creds = default_creds if args.searchkey is None else AzureKeyCredential(args.searchkey)
-    use_vectors = not args.novectors
-    compute_vectors_in_batch = not args.disablebatchvectors and args.openaimodelname in SUPPORTED_BATCH_AOAI_MODEL
-
-    if not args.skipblobs:
-        storage_creds = default_creds if args.storagekey is None else args.storagekey
-    if not args.localpdfparser:
-        # check if Azure Form Recognizer credentials are provided
-        if args.formrecognizerservice is None:
-            print(
-                "Error: Azure Form Recognizer service is not provided. Please provide formrecognizerservice or use --localpdfparser for local pypdf parser."
-            )
-            exit(1)
-        formrecognizer_creds = (
-            default_creds if args.formrecognizerkey is None else AzureKeyCredential(args.formrecognizerkey)
-        )
-
-    if use_vectors:
-        if args.openaihost != "openai":
-            if not args.openaikey:
-                openai.api_key = azd_credential.get_token("https://cognitiveservices.azure.com/.default").token
-                openai.api_type = "azure_ad"
-                open_ai_token_cache[CACHE_KEY_CREATED_TIME] = time.time()
-                open_ai_token_cache[CACHE_KEY_TOKEN_CRED] = azd_credential
-                open_ai_token_cache[CACHE_KEY_TOKEN_TYPE] = "azure_ad"
-            else:
-                openai.api_key = args.openaikey
-                openai.api_type = "azure"
-            openai.api_base = f"https://{args.openaiservice}.openai.azure.com"
-            openai.api_version = "2023-05-15"
-        else:
-            print("using normal openai")
-            openai.api_key = args.openaikey
-            openai.organization = args.openaiorg
-            openai.api_type = "openai"
 
     if args.removeall:
-        remove_blobs(None)
-        remove_from_index(None)
+        document_action = DocumentAction.RemoveAll
+    elif args.remove:
+        document_action = DocumentAction.Remove
     else:
-        if not args.remove:
-            create_search_index()
+        document_action = DocumentAction.Add
 
-        print("Processing files...")
-        if not args.datalakestorageaccount:
-            print(f"Using local files in {args.files}")
-            read_files(args.files, use_vectors, compute_vectors_in_batch, args.openaideployment, args.openaimodelname)
-        else:
-            print(f"Using Data Lake Gen2 Storage Account {args.datalakestorageaccount}")
-            read_adls_gen2_files(use_vectors, compute_vectors_in_batch, args.openaideployment, args.openaimodelname)
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+
+    search_info = loop.run_until_complete(
+        setup_search_info(
+            search_service=args.searchservice,
+            index_name=args.index,
+            azure_credential=azd_credential,
+            search_key=clean_key_if_exists(args.searchkey),
+            key_vault_name=args.keyvaultname,
+            search_secret_name=args.searchsecretname,
+        )
+    )
+    blob_manager = setup_blob_manager(
+        azure_credential=azd_credential,
+        storage_account=args.storageaccount,
+        storage_container=args.container,
+        storage_resource_group=args.storageresourcegroup,
+        subscription_id=args.subscriptionid,
+        search_images=args.searchimages,
+        storage_key=clean_key_if_exists(args.storagekey),
+    )
+    list_file_strategy = setup_list_file_strategy(
+        azure_credential=azd_credential,
+        local_files=args.files,
+        datalake_storage_account=args.datalakestorageaccount,
+        datalake_filesystem=args.datalakefilesystem,
+        datalake_path=args.datalakepath,
+        datalake_key=clean_key_if_exists(args.datalakekey),
+    )
+    openai_embeddings_service = setup_embeddings_service(
+        azure_credential=azd_credential,
+        openai_host=args.openaihost,
+        openai_model_name=args.openaimodelname,
+        openai_service=args.openaiservice,
+        openai_deployment=args.openaideployment,
+        openai_key=clean_key_if_exists(args.openaikey),
+        openai_org=args.openaiorg,
+        disable_vectors=args.novectors,
+        disable_batch_vectors=args.disablebatchvectors,
+    )
+
+    ingestion_strategy: Strategy
+    if use_int_vectorization:
+        ingestion_strategy = IntegratedVectorizerStrategy(
+            search_info=search_info,
+            list_file_strategy=list_file_strategy,
+            blob_manager=blob_manager,
+            document_action=document_action,
+            embeddings=openai_embeddings_service,
+            subscription_id=args.subscriptionid,
+            search_service_user_assigned_id=args.searchserviceassignedid,
+            search_analyzer_name=args.searchanalyzername,
+            use_acls=args.useacls,
+            category=args.category,
+        )
+    else:
+        file_processors = setup_file_processors(
+            azure_credential=azd_credential,
+            document_intelligence_service=args.documentintelligenceservice,
+            document_intelligence_key=clean_key_if_exists(args.documentintelligencekey),
+            local_pdf_parser=args.localpdfparser,
+            local_html_parser=args.localhtmlparser,
+            search_images=args.searchimages,
+        )
+        image_embeddings_service = setup_image_embeddings_service(
+            azure_credential=azd_credential, vision_endpoint=args.visionendpoint, search_images=args.searchimages
+        )
+
+        ingestion_strategy = FileStrategy(
+            search_info=search_info,
+            list_file_strategy=list_file_strategy,
+            blob_manager=blob_manager,
+            file_processors=file_processors,
+            document_action=document_action,
+            embeddings=openai_embeddings_service,
+            image_embeddings=image_embeddings_service,
+            search_analyzer_name=args.searchanalyzername,
+            use_acls=args.useacls,
+            category=args.category,
+        )
+
+    loop.run_until_complete(main(ingestion_strategy, setup_index=not args.remove and not args.removeall))
+    loop.close()
