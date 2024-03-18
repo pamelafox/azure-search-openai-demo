@@ -106,19 +106,18 @@ resource createAddCertificate 'Microsoft.Resources/deploymentScripts@2020-10-01'
       $existingCert = Get-AzKeyVaultCertificate -VaultName $vaultName -Name $certificateName
 
       if ($existingCert -and $existingCert.Certificate.Subject -eq $subjectName) {
-
         Write-Host 'Certificate $certificateName in vault $vaultName is already present.'
 
-        $Secret = Get-AzKeyVaultSecret -VaultName $vaultName -Name $certificateName
+        $certValue = (Get-AzKeyVaultSecret -VaultName $vaultName -Name $certificateName).SecretValue | ConvertFrom-SecureString -AsPlainText
+        $pfxCert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2 -ArgumentList @([Convert]::FromBase64String($certValue),"",[System.Security.Cryptography.X509Certificates.X509KeyStorageFlags]::Exportable)
+        $publicKey = [System.Convert]::ToBase64String($pfxCert.GetRawCertData())
 
         $DeploymentScriptOutputs['certStart'] = $existingCert.notBefore
         $DeploymentScriptOutputs['certEnd'] = $existingCert.expires
         $DeploymentScriptOutputs['certThumbprint'] = $existingCert.Thumbprint
-        $DeploymentScriptOutputs['certKey'] = ConvertFrom-SecureString $Secret.SecretValue
-        Write-Host 'Secret: ' $DeploymentScriptOutputs['certKey']
+        $DeploymentScriptOutputs['certKey'] = $publicKey
         $existingCert | Out-String
-      }
-      else {
+      } else {
         $policy = New-AzKeyVaultCertificatePolicy -SubjectName $subjectName -IssuerName Self -ValidityInMonths 12 -Verbose
 
         # private key is added as a secret that can be retrieved in the ARM template
