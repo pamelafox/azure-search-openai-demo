@@ -237,6 +237,7 @@ module backend 'core/host/appservice.bicep' = {
     clientAppId: useAuthentication ? registration.outputs.clientAppId : ''
     serverAppId: serverAppId
     clientSecretSettingName: !empty(clientAppSecret) ? 'AZURE_CLIENT_APP_SECRET' : ''
+    clientCertificateThumbprint: registration.outputs.certThumbprint
     authenticationIssuerUri: authenticationIssuerUri
     use32BitWorkerProcess: appServiceSkuName == 'F1'
     alwaysOn: appServiceSkuName != 'F1'
