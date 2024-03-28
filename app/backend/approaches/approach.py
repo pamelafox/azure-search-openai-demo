@@ -175,6 +175,41 @@ class Approach(ABC):
 
         return qualified_documents
 
+    async def search_postgres(
+        self,
+        top: int,
+        text: Optional[str],
+        vector: list[float],
+    ) -> List[Document]:
+        # send request to api to get results
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                url="http://host.docker.internal:8001/search",
+                json={"text": text, "top": top, "vector": vector},
+                raise_for_status=True,
+            ) as response:
+                json = await response.json()
+                documents = []
+                for document in json:
+                    documents.append(
+                        Document(
+                            id=document.get("id"),
+                            content=document.get("description"),
+                            embedding=document.get("embedding"),
+                            sourcepage=document.get("name"),
+                            sourcefile=document.get("name"),
+                            oids=document.get("oids"),
+                            groups=document.get("groups"),
+                            category=document.get("category"),
+                            captions=[],
+                            score=document.get("score"),
+                            reranker_score=document.get("reranker_score"),
+                            image_embedding=document.get("image_embedding"),
+                        )
+                    )
+
+                return documents
+
     def get_sources_content(
         self, results: List[Document], use_semantic_captions: bool, use_image_citation: bool
     ) -> list[str]:
