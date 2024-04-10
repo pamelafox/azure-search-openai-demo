@@ -12,6 +12,7 @@ import { SettingsButton } from "../../components/SettingsButton/SettingsButton";
 import { useLogin, getToken, isLoggedIn, requireAccessControl } from "../../authConfig";
 import { VectorSettings } from "../../components/VectorSettings";
 import { GPT4VSettings } from "../../components/GPT4VSettings";
+import { UploadFile } from "../../components/UploadFile";
 
 import { useMsal } from "@azure/msal-react";
 import { TokenClaimsDisplay } from "../../components/TokenClaimsDisplay";
@@ -22,6 +23,8 @@ export function Component(): JSX.Element {
     const [promptTemplatePrefix, setPromptTemplatePrefix] = useState<string>("");
     const [promptTemplateSuffix, setPromptTemplateSuffix] = useState<string>("");
     const [temperature, setTemperature] = useState<number>(0.3);
+    const [minimumRerankerScore, setMinimumRerankerScore] = useState<number>(0);
+    const [minimumSearchScore, setMinimumSearchScore] = useState<number>(0);
     const [retrievalMode, setRetrievalMode] = useState<RetrievalMode>(RetrievalMode.Hybrid);
     const [retrieveCount, setRetrieveCount] = useState<number>(3);
     const [useSemanticRanker, setUseSemanticRanker] = useState<boolean>(true);
@@ -36,6 +39,7 @@ export function Component(): JSX.Element {
     const [showGPT4VOptions, setShowGPT4VOptions] = useState<boolean>(false);
     const [showSemanticRankerOption, setShowSemanticRankerOption] = useState<boolean>(false);
     const [showVectorOption, setShowVectorOption] = useState<boolean>(false);
+    const [showUserUpload, setShowUserUpload] = useState<boolean>(false);
 
     const lastQuestionRef = useRef<string>("");
 
@@ -49,9 +53,7 @@ export function Component(): JSX.Element {
     const client = useLogin ? useMsal().instance : undefined;
 
     const getConfig = async () => {
-        const token = client ? await getToken(client) : undefined;
-
-        configApi(token).then(config => {
+        configApi().then(config => {
             setShowGPT4VOptions(config.showGPT4VOptions);
             setUseSemanticRanker(config.showSemanticRankerOption);
             setShowSemanticRankerOption(config.showSemanticRankerOption);
@@ -59,6 +61,7 @@ export function Component(): JSX.Element {
             if (!config.showVectorOption) {
                 setRetrievalMode(RetrievalMode.Text);
             }
+            setShowUserUpload(config.showUserUpload);
         });
     };
 
@@ -92,6 +95,8 @@ export function Component(): JSX.Element {
                         exclude_category: excludeCategory.length === 0 ? undefined : excludeCategory,
                         top: retrieveCount,
                         temperature: temperature,
+                        minimum_reranker_score: minimumRerankerScore,
+                        minimum_search_score: minimumSearchScore,
                         retrieval_mode: retrievalMode,
                         semantic_ranker: useSemanticRanker,
                         semantic_captions: useSemanticCaptions,
@@ -134,6 +139,13 @@ export function Component(): JSX.Element {
         setTemperature(newValue);
     };
 
+    const onMinimumSearchScoreChange = (_ev?: React.SyntheticEvent<HTMLElement, Event>, newValue?: string) => {
+        setMinimumSearchScore(parseFloat(newValue || "0"));
+    };
+
+    const onMinimumRerankerScoreChange = (_ev?: React.SyntheticEvent<HTMLElement, Event>, newValue?: string) => {
+        setMinimumRerankerScore(parseFloat(newValue || "0"));
+    };
     const onRetrieveCountChange = (_ev?: React.SyntheticEvent<HTMLElement, Event>, newValue?: string) => {
         setRetrieveCount(parseInt(newValue || "3"));
     };
@@ -187,7 +199,10 @@ export function Component(): JSX.Element {
     return (
         <div className={styles.askContainer}>
             <div className={styles.askTopSection}>
-                <SettingsButton className={styles.settingsButton} onClick={() => setIsConfigPanelOpen(!isConfigPanelOpen)} />
+                <div className={styles.commandsContainer}>
+                    {showUserUpload && <UploadFile className={styles.commandButton} disabled={!isLoggedIn(client)} />}
+                    <SettingsButton className={styles.commandButton} onClick={() => setIsConfigPanelOpen(!isConfigPanelOpen)} />
+                </div>
                 <h1 className={styles.askTitle}>Ask your data</h1>
                 <div className={styles.askQuestionInput}>
                     <QuestionInput
@@ -257,6 +272,25 @@ export function Component(): JSX.Element {
                     onChange={onTemperatureChange}
                     showValue
                     snapToStep
+                />
+
+                <SpinButton
+                    className={styles.askSettingsSeparator}
+                    label="Minimum search score"
+                    min={0}
+                    step={0.01}
+                    defaultValue={minimumSearchScore.toString()}
+                    onChange={onMinimumSearchScoreChange}
+                />
+
+                <SpinButton
+                    className={styles.askSettingsSeparator}
+                    label="Minimum reranker score"
+                    min={1}
+                    max={4}
+                    step={0.1}
+                    defaultValue={minimumRerankerScore.toString()}
+                    onChange={onMinimumRerankerScoreChange}
                 />
 
                 <SpinButton

@@ -5,11 +5,11 @@ from pathlib import Path
 import pytest
 import tiktoken
 
-from scripts.prepdocslib.listfilestrategy import LocalListFileStrategy
-from scripts.prepdocslib.page import Page
-from scripts.prepdocslib.pdfparser import LocalPdfParser
-from scripts.prepdocslib.searchmanager import Section
-from scripts.prepdocslib.textsplitter import (
+from prepdocslib.listfilestrategy import LocalListFileStrategy
+from prepdocslib.page import Page
+from prepdocslib.pdfparser import LocalPdfParser
+from prepdocslib.searchmanager import Section
+from prepdocslib.textsplitter import (
     ENCODING_MODEL,
     SentenceTextSplitter,
     SimpleTextSplitter,
@@ -120,6 +120,7 @@ async def test_sentencetextsplitter_multilang(test_doc, tmp_path):
         # Verify the size of the sections
         token_lengths = []
         for section in sections:
+            assert section.split_page.text != ""
             assert len(section.split_page.text) <= (text_splitter.max_section_length * 1.2)
             # Verify the number of tokens is below 500
             token_lengths.append((len(bpe.encode(section.split_page.text)), len(section.split_page.text)))

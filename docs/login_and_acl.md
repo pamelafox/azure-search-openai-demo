@@ -11,10 +11,9 @@
     - [Configure Server App Known Client Applications](#configure-server-app-known-client-applications)
     - [Testing](#testing)
   - [Troubleshooting Azure AD Setup](#troubleshooting-azure-ad-setup)
-- [Optional Scripts](#optional-scripts)
-  - [Azure Data Lake Storage Gen2 Setup](#azure-data-lake-storage-gen2-setup)
-  - [Azure Data Lake Storage Gen2 Prep Docs](#azure-data-lake-storage-gen2-prep-docs)
-  - [Manually managing Document Level Access Control](#manually-managing-document-level-access-control)
+- [Adding data with document level access control](#add-access-control-data)
+  - [Using the Add Documents API](#using-the-add-documents-api)
+  - [Azure Data Lake Storage Gen2 and prepdocs](#azure-data-lake-storage-gen2-setup)
 - [Environment Variables Reference](#environment-variables-reference)
   - [Authentication Behavior by Environment](#authentication-behavior-by-environment)
 
@@ -129,57 +128,31 @@ If you are running setup for the first time, ensure you have run `azd env set AZ
 
 Ensure you run `azd env set AZURE_USE_AUTHENTICATION` to enable the login UI once you have setup the two Azure AD apps before you deploy or run the application. The login UI will not appear unless all [required environment variables](#environment-variables-reference) have been setup.
 
-In both the chat and ask a question modes, under **Developer settings** optional **Use oid security filter** and **Use groups security filter** checkboxes will appear. The oid (User ID) filter maps to the `oids` field in the search index and the groups (Group ID) filter maps to the `groups` field in the search index. Use the optional scripts included in the sample to manage values for these fields.
+In both the chat and ask a question modes, under **Developer settings** optional **Use oid security filter** and **Use groups security filter** checkboxes will appear. The oid (User ID) filter maps to the `oids` field in the search index and the groups (Group ID) filter maps to the `groups` field in the search index. If `AZURE_ENFORCE_ACCESS_CONTROL` has been set, then both the **Use oid security filter** and **Use groups security filter** options are always enabled and cannot be disabled.
 
 ### Troubleshooting Azure AD Setup
 
 * If any Azure AD apps need to be recreated, you can avoid redeploying the app by [changing the app settings in the portal](https://learn.microsoft.com/azure/app-service/configure-common?tabs=portal#configure-app-settings). Any of the [required environment variables](#environment-variables-reference) can be changed. Once the environment variables have been changed, restart the web app.
-* It's possible a consent dialog will not appear when you log into the app for the first time. If this consent dialog doesn't appear, you will be unable to use the security filters because the API server app does not have permission to read your authorization information. A consent dialog can be forced to appear by adding `"prompt": "consent"` to the `loginRequest` property in [`authentication.py`](./app/backend/core/authentication.py)
+* It's possible a consent dialog will not appear when you log into the app for the first time. If this consent dialog doesn't appear, you will be unable to use the security filters because the API server app does not have permission to read your authorization information. A consent dialog can be forced to appear by adding `"prompt": "consent"` to the `loginRequest` property in [`authentication.py`](../app/backend/core/authentication.py)
 * It's possible that your tenant admin has placed a restriction on consent to apps with [unverified publishers](https://learn.microsoft.com/azure/active-directory/develop/publisher-verification-overview). In this case, only admins may consent to the client and server apps, and normal user accounts are unable to use the login system until the admin consents on behalf of the entire organization.
 * It's possible that your tenant admin requires [admin approval of all new apps](https://learn.microsoft.com/azure/active-directory/manage-apps/manage-consent-requests). Regardless of whether you select the delegated or admin permissions, the app will not work without tenant admin consent.
 
-## Optional scripts
+## Adding data with document level access control
 
-Two optional scripts are provided that allow easier setup of sample data with document level access control. Either the [Data Lake Storage Gen2 script](#azure-data-lake-storage-gen2-setup) or the [manual access control management](#manually-managing-document-level-access-control) can be used to setup sample data for the document level access control system.
+The sample supports 2 main strategies for adding data with document level access control.
 
-### Azure Data Lake Storage Gen2 Setup
+* [Using the Add Documents API](#using-the-add-documents-api). Sample scripts are provided which use the Azure AI Search Service [Add Documents API](https://learn.microsoft.com/rest/api/searchservice/documents/?view=rest-searchservice-2023-11-01&tabs=HTTP) to directly manage access control information on _existing documents_ in the index.
+* [Using prepdocs and Azure Data Lake Storage Gen 2](#azure-data-lake-storage-gen2-setup). Sample scripts are provided which set up an [Azure Data Lake Storage Gen 2](https://learn.microsoft.com/azure/storage/blobs/data-lake-storage-introduction) account, set the [access control information](https://learn.microsoft.com/azure/storage/blobs/data-lake-storage-access-control) on files and folders stored there, and ingest those documents into the search index with their  access control information.
 
-[Azure Data Lake Storage Gen2](https://learn.microsoft.com/azure/storage/blobs/data-lake-storage-introduction) implements an [access control model](https://learn.microsoft.com/azure/storage/blobs/data-lake-storage-access-control) that can be used for document level access control. The [adlsgen2setup.ps1](./scripts/adlsgen2setup.ps1) script uploads the sample data included in the [data](./data) folder to a Data Lake Storage Gen2 storage account. The [Storage Blob Data Owner](https://learn.microsoft.com/azure/storage/blobs/data-lake-storage-access-control-model#role-based-access-control-azure-rbac) role is required to use the script.
+### Using the Add Documents API
 
-In order to use this script, an existing Data Lake Storage Gen2 storage account is required. Run `azd env set AZURE_ADLS_GEN2_STORAGE_ACCOUNT <your-storage-account>` prior to running the script.
-
-To run the script, run the following command: `./scripts/adlsgen2setup.ps1`. The script performs the following steps:
-* Creates example [groups](https://learn.microsoft.com/azure/active-directory/fundamentals/how-to-manage-groups) listed in the [sampleacls.json](./scripts/sampleacls.json) file.
-* Creates a filesystem / container `gptkbcontainer` in the storage account.
-* Creates the directories listed in the [sampleacls.json](./scripts/sampleacls.json) file.
-* Uploads the sample PDFs referenced in the [sampleacls.json](./scripts/sampleacls.json) file into the appropriate directories.
-* [Recursively sets Access Control Lists (ACLs)](https://learn.microsoft.com/azure/storage/blobs/data-lake-storage-acl-cli) using the information from the [sampleacls.json](./scripts/sampleacls.json) file.
-
-In order to use the sample access control, you need to join these groups in your Azure AD tenant.
-
-Note that this optional script may not work in Codespaces if your administrator has applied a [Conditional Access policy](https://learn.microsoft.com/azure/active-directory/conditional-access/overview) to your tenant.
-
-### Azure Data Lake Storage Gen2 Prep Docs
-
-Once a Data Lake Storage Gen2 storage account has been setup with sample data and access control lists, [prepdocs.py](./scripts/prepdocs.py) can be used to automatically process PDFs in the storage account and store them with their [access control lists in the search index](https://learn.microsoft.com/azure/storage/blobs/data-lake-storage-access-control).
-
-To run this script with a Data Lake Storage Gen2 account, first set the following environment variables:
-
-* `AZURE_ADLS_GEN2_STORAGE_ACCOUNT`: Name of existing [Data Lake Storage Gen2 storage account](https://learn.microsoft.com/azure/storage/blobs/data-lake-storage-introduction).
-* (Optional) `AZURE_ADLS_GEN2_FILESYSTEM`: Name of existing Data Lake Storage Gen2 filesystem / container in the storage account. If empty, `gptkbcontainer` is used.
-* (Optional) `AZURE_ADLS_GEN2_FILESYSTEM_PATH`: Specific path in the Data Lake Storage Gen2 filesystem / container to process. Only PDFs contained in this path will be processed.
-
-Once the environment variables are set, run the script using the following command: `./scripts/prepdocs.ps1` or `./scripts/prepdocs.sh`.
-
-### Manually managing Document Level Access Control
-
-Manually enable document level access control on a search index and manually set access control values using the [manageacl.ps1](./scripts/manageacl.ps1) script.
+Manually enable document level access control on a search index and manually set access control values using the [manageacl.ps1](../scripts/manageacl.ps1) script.
 
 Run `azd up` or use `azd env set` to manually set `AZURE_SEARCH_SERVICE` and `AZURE_SEARCH_INDEX` environment variables prior to running the script.
 
-The script supports the following commands. Note that the syntax is the same regardless of whether [manageacl.ps1](./scripts/manageacl.ps1) or [manageacl.sh](./scripts/manageacl.sh) is used.
+The script supports the following commands. Note that the syntax is the same regardless of whether [manageacl.ps1](../scripts/manageacl.ps1) or [manageacl.sh](../scripts/manageacl.sh) is used.
 * `./scripts/manageacl.ps1 --acl-action enable_acls`: Creates the required `oids` (User ID) and `groups` (Group IDs) [security filter](https://learn.microsoft.com/azure/search/search-security-trimming-for-azure-search) fields for document level access control on your index. Does nothing if these fields already exist.
-  * Example usage: `../scripts/manageacl.ps1 --acl-action enable_acls`
+  * Example usage: `./scripts/manageacl.ps1 --acl-action enable_acls`
 * `./scripts/manageacl.ps1 --document [name-of-pdf.pdf] --acl-type [oids or groups]--acl-action view`: Prints access control values associated with either User IDs or Group IDs for a specific document.
   * Example to view all Group IDs from the Benefit_Options PDF: `./scripts/manageacl.ps1 --document Benefit_Options.pdf --acl-type oids --acl-action view`.
 * `./scripts/manageacl.ps1 --document [name-of-pdf.pdf] --acl-type [oids or groups]--acl-action add --acl [ID of group or user]`: Adds an access control value associated with either User IDs or Group IDs for a specific document.
@@ -188,6 +161,35 @@ The script supports the following commands. Note that the syntax is the same reg
   * Example to remove all Group IDs from the Benefit_Options PDF: `./scripts/manageacl.ps1 --document Benefit_Options.pdf --acl-type groups --acl-action remove_all`.
 * `./scripts/manageacl.ps1 --document [name-of-pdf.pdf] --acl-type [oids or groups]--acl-action remove --acl [ID of group or user]`: Removes an access control value associated with either User IDs or Group IDs for a specific document.
   * Example to remove a specific User ID from the Benefit_Options PDF: `./scripts/manageacl.ps1 --document Benefit_Options.pdf --acl-type oids --acl-action remove --acl xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`.
+
+### Azure Data Lake Storage Gen2 Setup
+
+[Azure Data Lake Storage Gen2](https://learn.microsoft.com/azure/storage/blobs/data-lake-storage-introduction) implements an [access control model](https://learn.microsoft.com/azure/storage/blobs/data-lake-storage-access-control) that can be used for document level access control. The [adlsgen2setup.ps1](../scripts/adlsgen2setup.ps1) script uploads the sample data included in the [data](./data) folder to a Data Lake Storage Gen2 storage account. The [Storage Blob Data Owner](https://learn.microsoft.com/azure/storage/blobs/data-lake-storage-access-control-model#role-based-access-control-azure-rbac) role is required to use the script.
+
+In order to use this script, an existing Data Lake Storage Gen2 storage account is required. Run `azd env set AZURE_ADLS_GEN2_STORAGE_ACCOUNT <your-storage-account>` prior to running the script.
+
+To run the script, run the following command: `/scripts/adlsgen2setup.ps1`. The script performs the following steps:
+* Creates example [groups](https://learn.microsoft.com/azure/active-directory/fundamentals/how-to-manage-groups) listed in the [sampleacls.json](../scripts/sampleacls.json) file.
+* Creates a filesystem / container `gptkbcontainer` in the storage account.
+* Creates the directories listed in the [sampleacls.json](../scripts/sampleacls.json) file.
+* Uploads the sample PDFs referenced in the [sampleacls.json](../scripts/sampleacls.json) file into the appropriate directories.
+* [Recursively sets Access Control Lists (ACLs)](https://learn.microsoft.com/azure/storage/blobs/data-lake-storage-acl-cli) using the information from the [sampleacls.json](../scripts/sampleacls.json) file.
+
+In order to use the sample access control, you need to join these groups in your Azure AD tenant.
+
+Note that this optional script may not work in Codespaces if your administrator has applied a [Conditional Access policy](https://learn.microsoft.com/azure/active-directory/conditional-access/overview) to your tenant.
+
+#### Azure Data Lake Storage Gen2 Prep Docs
+
+Once a Data Lake Storage Gen2 storage account has been setup with sample data and access control lists, [prepdocs.py](../app/backend/prepdocs.py) can be used to automatically process PDFs in the storage account and store them with their [access control lists in the search index](https://learn.microsoft.com/azure/storage/blobs/data-lake-storage-access-control).
+
+To run this script with a Data Lake Storage Gen2 account, first set the following environment variables:
+
+* `AZURE_ADLS_GEN2_STORAGE_ACCOUNT`: Name of existing [Data Lake Storage Gen2 storage account](https://learn.microsoft.com/azure/storage/blobs/data-lake-storage-introduction).
+* (Optional) `AZURE_ADLS_GEN2_FILESYSTEM`: Name of existing Data Lake Storage Gen2 filesystem / container in the storage account. If empty, `gptkbcontainer` is used.
+* (Optional) `AZURE_ADLS_GEN2_FILESYSTEM_PATH`: Specific path in the Data Lake Storage Gen2 filesystem / container to process. Only PDFs contained in this path will be processed.
+
+Once the environment variables are set, run the script using the following command: `/scripts/prepdocs.ps1` or `/scripts/prepdocs.sh`.
 
 ## Environment Variables Reference
 

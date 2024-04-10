@@ -48,6 +48,7 @@ class RetrieveThenReadVisionApproach(Approach):
         gpt4v_model: str,
         embedding_deployment: Optional[str],  # Not needed for non-Azure OpenAI or for retrieval_mode="text"
         embedding_model: str,
+        embedding_dimensions: int,
         sourcepage_field: str,
         content_field: str,
         query_language: str,
@@ -61,6 +62,7 @@ class RetrieveThenReadVisionApproach(Approach):
         self.auth_helper = auth_helper
         self.embedding_model = embedding_model
         self.embedding_deployment = embedding_deployment
+        self.embedding_dimensions = embedding_dimensions
         self.sourcepage_field = sourcepage_field
         self.content_field = content_field
         self.gpt4v_deployment = gpt4v_deployment
@@ -89,6 +91,8 @@ class RetrieveThenReadVisionApproach(Approach):
 
         use_semantic_captions = True if overrides.get("semantic_captions") and has_text else False
         top = overrides.get("top", 3)
+        minimum_search_score = overrides.get("minimum_search_score", 0.0)
+        minimum_reranker_score = overrides.get("minimum_reranker_score", 0.0)
         filter = self.build_filter(overrides, auth_claims)
         use_semantic_ranker = overrides.get("semantic_ranker") and has_text
 
@@ -107,7 +111,16 @@ class RetrieveThenReadVisionApproach(Approach):
         # Only keep the text query if the retrieval mode uses text, otherwise drop it
         query_text = q if has_text else None
 
-        results = await self.search(top, query_text, filter, vectors, use_semantic_ranker, use_semantic_captions)
+        results = await self.search(
+            top,
+            query_text,
+            filter,
+            vectors,
+            use_semantic_ranker,
+            use_semantic_captions,
+            minimum_search_score,
+            minimum_reranker_score,
+        )
 
         image_list: list[ChatCompletionContentPartImageParam] = []
         user_content: list[ChatCompletionContentPartParam] = [{"text": q, "type": "text"}]
