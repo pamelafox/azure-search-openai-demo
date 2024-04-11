@@ -2,11 +2,11 @@ import argparse
 import asyncio
 import json
 import logging
-from typing import Union
+from typing import Any, Union
 
 from azure.core.credentials import AzureKeyCredential
 from azure.core.credentials_async import AsyncTokenCredential
-from azure.identity import AzureDeveloperCliCredential
+from azure.identity.aio import AzureDeveloperCliCredential
 from azure.search.documents.aio import SearchClient
 from azure.search.documents.indexes.aio import SearchIndexClient
 from azure.search.documents.indexes.models import (
@@ -143,14 +143,16 @@ class ManageAcl:
             await search_index_client.create_or_update_index(index_definition)
 
 
-async def main(args: any):
+async def main(args: Any):
     # Use the current user identity to connect to Azure services unless a key is explicitly set for any of them
     azd_credential = (
         AzureDeveloperCliCredential()
         if args.tenant_id is None
         else AzureDeveloperCliCredential(tenant_id=args.tenant_id, process_timeout=60)
     )
-    search_credential = azd_credential if args.search_key is None else AzureKeyCredential(args.search_key)
+    search_credential: Union[AsyncTokenCredential, AzureKeyCredential] = azd_credential
+    if args.search_key is not None:
+        search_credential = AzureKeyCredential(args.search_key)
 
     command = ManageAcl(
         service_name=args.search_service,
@@ -172,17 +174,17 @@ if __name__ == "__main__":
     parser.add_argument(
         "--search-service",
         required=True,
-        help="Name of the Azure Cognitive Search service where content should be indexed (must exist already)",
+        help="Name of the Azure AI Search service where content should be indexed (must exist already)",
     )
     parser.add_argument(
         "--index",
         required=True,
-        help="Name of the Azure Cognitive Search index where content should be indexed (will be created if it doesn't exist)",
+        help="Name of the Azure AI Search index where content should be indexed (will be created if it doesn't exist)",
     )
     parser.add_argument(
         "--search-key",
         required=False,
-        help="Optional. Use this Azure Cognitive Search account key instead of the current user identity to login (use az login to set current user for Azure)",
+        help="Optional. Use this Azure AI Search account key instead of the current user identity to login (use az login to set current user for Azure)",
     )
     parser.add_argument("--acl-type", required=False, choices=["oids", "groups"], help="Optional. Type of ACL")
     parser.add_argument(

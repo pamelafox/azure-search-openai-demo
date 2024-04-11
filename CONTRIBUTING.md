@@ -15,7 +15,7 @@ contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additio
  - [Code of Conduct](#coc)
  - [Issues and Bugs](#issue)
  - [Feature Requests](#feature)
- - [Submission Guidelines](#submit)
+ - [Submitting a PR](#submit-pr)
  - [Running Tests](#tests)
  - [Code Style](#style)
 
@@ -82,6 +82,12 @@ Install the pre-commit hooks:
 pre-commit install
 ```
 
+Compile the JavaScript:
+
+```
+( cd ./app/frontend ; npm install ; npm run build )
+```
+
 ## <a name="unit-tests"></a> Running unit tests
 
 Run the tests:
@@ -108,8 +114,18 @@ playwright install --with-deps
 Run the tests:
 
 ```
-python3 -m pytest tests/e2e.py
+python3 -m pytest tests/e2e.py --tracing=retain-on-failure
 ```
+
+When a failure happens, the trace zip will be saved in the test-results folder.
+You can view that using the Playwright CLI:
+
+```
+playwright show-trace test-results/<trace-zip>
+```
+
+You can also use the online trace viewer at https://trace.playwright.dev/
+
 
 ## <a name="style"></a> Code Style
 
@@ -135,3 +151,5 @@ Run `black` to format a file:
 ```
 python3 -m black <path-to-file>
 ```
+
+If you followed the steps above to install the pre-commit hooks, then you can just wait for those hooks to run `ruff` and `black` for you.
