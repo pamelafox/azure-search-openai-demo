@@ -1,7 +1,7 @@
 // Refactored from https://github.com/Azure-Samples/ms-identity-javascript-react-tutorial/blob/main/1-Authentication/1-sign-in/SPA/src/authConfig.js
 
 import { IPublicClientApplication } from "@azure/msal-browser";
-
+import { TokenCredential } from "@typespec/ts-http-runtime";
 const appServicesAuthTokenUrl = ".auth/me";
 const appServicesAuthTokenRefreshUrl = ".auth/refresh";
 const appServicesAuthLogoutUrl = ".auth/logout?post_logout_redirect_uri=/";

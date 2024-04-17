@@ -1,3 +1,5 @@
+import { AIChatCompletion } from "@microsoft/ai-chat-protocol";
+
 export const enum RetrievalMode {
     Hybrid = "hybrid",
     Vectors = "vectors",
@@ -52,6 +54,10 @@ export type ResponseContext = {
     followup_questions: string[] | null;
     thoughts: Thoughts[];
 };
+
+export interface AIRAGChatCompletion extends AIChatCompletion {
+    context: ResponseContext;
+}
 
 export type ResponseChoice = {
     index: number;

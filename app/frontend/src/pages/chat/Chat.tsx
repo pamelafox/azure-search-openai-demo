@@ -1,21 +1,11 @@
 import { useRef, useState, useEffect } from "react";
 import { Checkbox, Panel, DefaultButton, TextField, SpinButton, Slider } from "@fluentui/react";
 import { SparkleFilled } from "@fluentui/react-icons";
-import readNDJSONStream from "ndjson-readablestream";
+import { AIChatMessage, AIChatProtocolClient, AIChatCompletion, AIChatCompletionDelta } from "@microsoft/ai-chat-protocol";
 
 import styles from "./Chat.module.css";
 
-import {
-    chatApi,
-    configApi,
-    RetrievalMode,
-    ChatAppResponse,
-    ChatAppResponseOrError,
-    ChatAppRequest,
-    ResponseMessage,
-    VectorFieldOptions,
-    GPT4VInput
-} from "../../api";
+import { chatApi, configApi, RetrievalMode, ChatAppResponse, ResponseMessage, VectorFieldOptions, GPT4VInput } from "../../api";
 import { Answer, AnswerError, AnswerLoading } from "../../components/Answer";
 import { QuestionInput } from "../../components/QuestionInput";
 import { ExampleList } from "../../components/Example";
@@ -60,8 +50,8 @@ const Chat = () => {
     const [activeAnalysisPanelTab, setActiveAnalysisPanelTab] = useState<AnalysisPanelTabs | undefined>(undefined);
 
     const [selectedAnswer, setSelectedAnswer] = useState<number>(0);
-    const [answers, setAnswers] = useState<[user: string, response: ChatAppResponse][]>([]);
-    const [streamedAnswers, setStreamedAnswers] = useState<[user: string, response: ChatAppResponse][]>([]);
+    const [answers, setAnswers] = useState<[user: string, response: AIChatCompletion][]>([]);
+    const [streamedAnswers, setStreamedAnswers] = useState<[user: string, response: AIChatCompletion][]>([]);
     const [showGPT4VOptions, setShowGPT4VOptions] = useState<boolean>(false);
     const [showSemanticRankerOption, setShowSemanticRankerOption] = useState<boolean>(false);
     const [showVectorOption, setShowVectorOption] = useState<boolean>(false);
@@ -80,47 +70,45 @@ const Chat = () => {
         });
     };
 
-    const handleAsyncRequest = async (question: string, answers: [string, ChatAppResponse][], setAnswers: Function, responseBody: ReadableStream<any>) => {
-        let answer: string = "";
-        let askResponse: ChatAppResponse = {} as ChatAppResponse;
+    const handleAsyncRequest = async (
+        question: string,
+        answers: [string, AIChatCompletion][],
+        setAnswers: Function,
+        result: AsyncIterable<AIChatCompletionDelta>
+    ) => {
+        const latestCompletion: AIChatCompletion = {
+            message: { content: "", role: "assistant" },
+            context: { data_points: [], followup_questions: [], thoughts: [] },
+            finishReason: "stop"
+        };
 
         const updateState = (newContent: string) => {
             return new Promise(resolve => {
                 setTimeout(() => {
-                    answer += newContent;
-                    const latestResponse: ChatAppResponse = {
-                        ...askResponse,
-                        choices: [{ ...askResponse.choices[0], message: { content: answer, role: askResponse.choices[0].message.role } }]
-                    };
-                    setStreamedAnswers([...answers, [question, latestResponse]]);
+                    latestCompletion.message.content += newContent;
+                    setStreamedAnswers([...answers, [question, latestCompletion]]);
                     resolve(null);
                 }, 33);
             });
         };
         try {
             setIsStreaming(true);
-            for await (const event of readNDJSONStream(responseBody)) {
-                if (event["choices"] && event["choices"][0]["context"] && event["choices"][0]["context"]["data_points"]) {
-                    event["choices"][0]["message"] = event["choices"][0]["delta"];
-                    askResponse = event as ChatAppResponse;
-                } else if (event["choices"] && event["choices"][0]["delta"]["content"]) {
+            for await (const response of result) {
+                if (!response.delta) {
+                    continue;
+                }
+                if (response.delta.role) {
+                    latestCompletion.message.role = response.delta.role;
+                }
+                if (response.delta.content) {
                     setIsLoading(false);
-                    await updateState(event["choices"][0]["delta"]["content"]);
-                } else if (event["choices"] && event["choices"][0]["context"]) {
-                    // Update context with new keys from latest event
-                    askResponse.choices[0].context = { ...askResponse.choices[0].context, ...event["choices"][0]["context"] };
-                } else if (event["error"]) {
-                    throw Error(event["error"]);
+                    await updateState(response.delta.content);
                 }
             }
         } finally {
             setIsStreaming(false);
         }
-        const fullResponse: ChatAppResponse = {
-            ...askResponse,
-            choices: [{ ...askResponse.choices[0], message: { content: answer, role: askResponse.choices[0].message.role } }]
-        };
-        return fullResponse;
+        return latestCompletion;
     };
 
     const client = useLogin ? useMsal().instance : undefined;
@@ -135,15 +123,17 @@ const Chat = () => {
 
         const token = client ? await getToken(client) : undefined;
 
+        const chat_client = new AIChatProtocolClient(window.location.origin + "/chat", {
+            allowInsecureConnection: true
+        });
         try {
-            const messages: ResponseMessage[] = answers.flatMap(a => [
+            const messages: AIChatMessage[] = answers.flatMap(a => [
                 { content: a[0], role: "user" },
-                { content: a[1].choices[0].message.content, role: "assistant" }
+                { content: a[1].message.content, role: "assistant" }
             ]);
+            const allMessages: AIChatMessage[] = [...messages, { content: question, role: "user" }];
 
-            const request: ChatAppRequest = {
-                messages: [...messages, { content: question, role: "user" }],
-                stream: shouldStream,
+            const options = {
                 context: {
                     overrides: {
                         prompt_template: promptTemplate.length === 0 ? undefined : promptTemplate,
@@ -162,24 +152,16 @@ const Chat = () => {
                         use_gpt4v: useGPT4V,
                         gpt4v_input: gpt4vInput
                     }
-                },
-                // ChatAppProtocol: Client must pass on any session state received from the server
-                session_state: answers.length ? answers[answers.length - 1][1].choices[0].session_state : null
+                }
             };
 
-            const response = await chatApi(request, token);
-            if (!response.body) {
-                throw Error("No response body");
-            }
             if (shouldStream) {
-                const parsedResponse: ChatAppResponse = await handleAsyncRequest(question, answers, setAnswers, response.body);
+                const result = await chat_client.getStreamedCompletion(allMessages, options);
+                const parsedResponse = await handleAsyncRequest(question, answers, setAnswers, result);
                 setAnswers([...answers, [question, parsedResponse]]);
             } else {
-                const parsedResponse: ChatAppResponseOrError = await response.json();
-                if (response.status > 299 || !response.ok) {
-                    throw Error(parsedResponse.error || "Unknown error");
-                }
-                setAnswers([...answers, [question, parsedResponse as ChatAppResponse]]);
+                const result = await chat_client.getCompletion(allMessages, options);
+                setAnswers([...answers, [question, result]]);
             }
         } catch (e) {
             setError(e);
