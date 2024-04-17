@@ -38,11 +38,6 @@ export type ChatAppRequestOverrides = {
     vector_fields: VectorFieldOptions[];
 };
 
-export type ResponseMessage = {
-    content: string;
-    role: string;
-};
-
 export type Thoughts = {
     title: string;
     description: any; // It can be any output from the api
@@ -69,10 +64,6 @@ export type ResponseChoice = {
 export type ChatAppResponseOrError = {
     choices?: ResponseChoice[];
     error?: string;
-};
-
-export type ChatAppResponse = {
-    choices: ResponseChoice[];
 };
 
 export type ChatAppRequestContext = {

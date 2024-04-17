@@ -37,14 +37,6 @@ export async function askApi(request: ChatAppRequest, idToken: string | undefine
     return parsedResponse as ChatAppResponse;
 }
 
-export async function chatApi(request: ChatAppRequest, idToken: string | undefined): Promise<Response> {
-    return await fetch(`${BACKEND_URI}/chat`, {
-        method: "POST",
-        headers: { ...getHeaders(idToken), "Content-Type": "application/json" },
-        body: JSON.stringify(request)
-    });
-}
-
 export function getCitationFilePath(citation: string): string {
     return `${BACKEND_URI}/content/${citation}`;
 }

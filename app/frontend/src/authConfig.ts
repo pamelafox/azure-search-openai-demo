@@ -1,15 +1,16 @@
 // Refactored from https://github.com/Azure-Samples/ms-identity-javascript-react-tutorial/blob/main/1-Authentication/1-sign-in/SPA/src/authConfig.js
 
 import { IPublicClientApplication } from "@azure/msal-browser";
-import { TokenCredential } from "@typespec/ts-http-runtime";
+import { TokenCredential, GetTokenOptions, AccessToken } from "@typespec/ts-http-runtime";
 const appServicesAuthTokenUrl = ".auth/me";
 const appServicesAuthTokenRefreshUrl = ".auth/refresh";
 const appServicesAuthLogoutUrl = ".auth/logout?post_logout_redirect_uri=/";
 
 interface AppServicesToken {
-    id_token: string;
+    id_token: string; // Unused?
     access_token: string;
     user_claims: Record<string, any>;
+    exp: number;
 }
 
 interface AuthSetup {
@@ -96,8 +97,9 @@ const getAppServicesToken = (): Promise<AppServicesToken | null> => {
                     return r.json().then(json => {
                         if (json.length > 0) {
                             return {
-                                id_token: json[0]["id_token"] as string,
+                                id_token: json[0]["id_token"] as string, // Unused?
                                 access_token: json[0]["access_token"] as string,
+                                exp: json[0]["exp"] as number,
                                 user_claims: json[0]["user_claims"].reduce((acc: Record<string, any>, item: Record<string, any>) => {
                                     acc[item.typ] = item.val;
                                     return acc;
@@ -131,22 +133,43 @@ export const isLoggedIn = (client: IPublicClientApplication | undefined): boolea
     return client?.getActiveAccount() != null || appServicesToken != null;
 };
 
-// Get an access token for use with the API server.
-// ID token received when logging in may not be used for this purpose because it has the incorrect audience
-// Use the access token from app services login if available
-export const getToken = (client: IPublicClientApplication): Promise<string | undefined> => {
-    if (appServicesToken) {
-        return Promise.resolve(appServicesToken.access_token);
+export class MsalOrAppTokenCredential implements TokenCredential {
+    constructor(private client: IPublicClientApplication | undefined) {
+        this.client = client;
     }
 
-    return client
-        .acquireTokenSilent({
-            ...tokenRequest,
-            redirectUri: getRedirectUri()
-        })
-        .then(r => r.accessToken)
-        .catch(error => {
-            console.log(error);
-            return undefined;
-        });
+    async getToken(scopes: string | string[], options?: GetTokenOptions): Promise<null | AccessToken> {
+        if (!this.client) {
+            return null;
+        }
+        // Get an access token for use with the API server.
+        // ID token received when logging in may not be used for this purpose because it has the incorrect audience
+        // Use the access token from app services login if available
+        if (appServicesToken) {
+            return Promise.resolve({
+                token: appServicesToken.access_token,
+                expiresOnTimestamp: appServicesToken.exp
+            });
+        }
+
+        return this.client
+            .acquireTokenSilent({
+                ...tokenRequest,
+                redirectUri: getRedirectUri()
+            })
+            .then(r => {
+                return {
+                    token: r.accessToken,
+                    expiresOnTimestamp: r.expiresOn?.getTime() || 0 // How to handle null expiration??
+                };
+            })
+            .catch(error => {
+                console.log(error);
+                return null;
+            });
+    }
+}
+
+export const getToken = (client: IPublicClientApplication): Promise<string | undefined> => {
+    return new MsalOrAppTokenCredential(client).getToken([]).then(r => r?.token);
 };

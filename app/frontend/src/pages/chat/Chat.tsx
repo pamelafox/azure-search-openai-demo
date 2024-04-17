@@ -5,7 +5,7 @@ import { AIChatMessage, AIChatProtocolClient, AIChatCompletion, AIChatCompletion
 
 import styles from "./Chat.module.css";
 
-import { chatApi, configApi, RetrievalMode, ChatAppResponse, ResponseMessage, VectorFieldOptions, GPT4VInput } from "../../api";
+import { configApi, RetrievalMode, VectorFieldOptions, GPT4VInput } from "../../api";
 import { Answer, AnswerError, AnswerLoading } from "../../components/Answer";
 import { QuestionInput } from "../../components/QuestionInput";
 import { ExampleList } from "../../components/Example";
@@ -14,7 +14,7 @@ import { AnalysisPanel, AnalysisPanelTabs } from "../../components/AnalysisPanel
 import { SettingsButton } from "../../components/SettingsButton";
 import { ClearChatButton } from "../../components/ClearChatButton";
 import { UploadFile } from "../../components/UploadFile";
-import { useLogin, getToken, isLoggedIn, requireAccessControl } from "../../authConfig";
+import { useLogin, MsalOrAppTokenCredential, isLoggedIn, requireAccessControl } from "../../authConfig";
 import { VectorSettings } from "../../components/VectorSettings";
 import { useMsal } from "@azure/msal-react";
 import { TokenClaimsDisplay } from "../../components/TokenClaimsDisplay";
@@ -133,11 +133,17 @@ const Chat = () => {
         setActiveCitation(undefined);
         setActiveAnalysisPanelTab(undefined);
 
-        const token = client ? await getToken(client) : undefined;
-
-        const chat_client = new AIChatProtocolClient(window.location.origin + "/chat", {
-            allowInsecureConnection: true
-        });
+        let chatClient: AIChatProtocolClient;
+        if (useLogin) {
+            const tokenProvider = new MsalOrAppTokenCredential(client);
+            chatClient = new AIChatProtocolClient(window.location.origin + "/chat", tokenProvider, {
+                allowInsecureConnection: true // Turn off for prod somehow?
+            });
+        } else {
+            chatClient = new AIChatProtocolClient(window.location.origin + "/chat", {
+                allowInsecureConnection: true // Turn off for prod somehow?
+            });
+        }
         try {
             const messages: AIChatMessage[] = answers.flatMap(a => [
                 { content: a[0], role: "user" },
@@ -168,11 +174,11 @@ const Chat = () => {
             };
 
             if (shouldStream) {
-                const result = await chat_client.getStreamedCompletion(allMessages, options);
+                const result = await chatClient.getStreamedCompletion(allMessages, options);
                 const parsedResponse = await handleAsyncRequest(question, answers, setAnswers, result);
                 setAnswers([...answers, [question, parsedResponse]]);
             } else {
-                const result = await chat_client.getCompletion(allMessages, options);
+                const result = await chatClient.getCompletion(allMessages, options);
                 setAnswers([...answers, [question, result]]);
             }
         } catch (e) {
