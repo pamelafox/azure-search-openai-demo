@@ -76,16 +76,21 @@ const Chat = () => {
         setAnswers: Function,
         result: AsyncIterable<AIChatCompletionDelta>
     ) => {
-        const latestCompletion: AIChatCompletion = {
+        let answer = "";
+        let chatCompletion: AIChatCompletion = {
+            context: {},
             message: { content: "", role: "assistant" },
-            context: { data_points: [], followup_questions: [], thoughts: [] },
             finishReason: "stop"
         };
-
         const updateState = (newContent: string) => {
             return new Promise(resolve => {
                 setTimeout(() => {
-                    latestCompletion.message.content += newContent;
+                    answer += newContent;
+                    // We need to create a new object to trigger a re-render
+                    const latestCompletion: AIChatCompletion = {
+                        ...chatCompletion,
+                        message: { content: answer, role: chatCompletion.message.role }
+                    };
                     setStreamedAnswers([...answers, [question, latestCompletion]]);
                     resolve(null);
                 }, 33);
@@ -98,17 +103,24 @@ const Chat = () => {
                     continue;
                 }
                 if (response.delta.role) {
-                    latestCompletion.message.role = response.delta.role;
+                    chatCompletion.message.role = response.delta.role;
                 }
                 if (response.delta.content) {
                     setIsLoading(false);
                     await updateState(response.delta.content);
                 }
+                if (response.delta.context) {
+                    chatCompletion.context = {
+                        ...chatCompletion.context,
+                        ...response.delta.context
+                    };
+                }
             }
         } finally {
             setIsStreaming(false);
         }
-        return latestCompletion;
+        chatCompletion.message.content = answer;
+        return chatCompletion;
     };
 
     const client = useLogin ? useMsal().instance : undefined;
