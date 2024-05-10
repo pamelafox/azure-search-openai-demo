@@ -6,6 +6,11 @@ import pytest
 from azure.core.credentials import AzureKeyCredential
 from azure.search.documents.aio import SearchClient
 from azure.search.documents.indexes.aio import SearchIndexClient
+from azure.search.documents.indexes.models import (
+    SearchFieldDataType,
+    SearchIndex,
+    SimpleField,
+)
 from openai.types.create_embedding_response import Usage
 
 from prepdocslib.embeddings import AzureOpenAIEmbeddingService
@@ -75,20 +80,72 @@ async def test_create_index_using_int_vectorization(monkeypatch, search_info):
 
 @pytest.mark.asyncio
 async def test_create_index_does_exist(monkeypatch, search_info):
-    indexes = []
+    created_indexes = []
+    updated_indexes = []
 
     async def mock_create_index(self, index):
-        indexes.append(index)
+        created_indexes.append(index)
 
     async def mock_list_index_names(self):
         yield "test"
 
+    async def mock_get_index(self, *args, **kwargs):
+        return SearchIndex(
+            name="test",
+            fields=[
+                SimpleField(
+                    name="storageUrl",
+                    type=SearchFieldDataType.String,
+                    filterable=True,
+                )
+            ],
+        )
+
+    async def mock_create_or_update_index(self, index, *args, **kwargs):
+        updated_indexes.append(index)
+
     monkeypatch.setattr(SearchIndexClient, "create_index", mock_create_index)
     monkeypatch.setattr(SearchIndexClient, "list_index_names", mock_list_index_names)
+    monkeypatch.setattr(SearchIndexClient, "get_index", mock_get_index)
+    monkeypatch.setattr(SearchIndexClient, "create_or_update_index", mock_create_or_update_index)
 
     manager = SearchManager(search_info)
     await manager.create_index()
-    assert len(indexes) == 0, "It should not have created a new index"
+    assert len(created_indexes) == 0, "It should not have created a new index"
+    assert len(updated_indexes) == 0, "It should not have updated the existing index"
+
+
+@pytest.mark.asyncio
+async def test_create_index_add_field(monkeypatch, search_info):
+    created_indexes = []
+    updated_indexes = []
+
+    async def mock_create_index(self, index):
+        created_indexes.append(index)
+
+    async def mock_list_index_names(self):
+        yield "test"
+
+    async def mock_get_index(self, *args, **kwargs):
+        return SearchIndex(
+            name="test",
+            fields=[],
+        )
+
+    async def mock_create_or_update_index(self, index, *args, **kwargs):
+        updated_indexes.append(index)
+
+    monkeypatch.setattr(SearchIndexClient, "create_index", mock_create_index)
+    monkeypatch.setattr(SearchIndexClient, "list_index_names", mock_list_index_names)
+    monkeypatch.setattr(SearchIndexClient, "get_index", mock_get_index)
+    monkeypatch.setattr(SearchIndexClient, "create_or_update_index", mock_create_or_update_index)
+
+    manager = SearchManager(search_info)
+    await manager.create_index()
+    assert len(created_indexes) == 0, "It should not have created a new index"
+    assert len(updated_indexes) == 1, "It should have updated the existing index"
+    assert len(updated_indexes[0].fields) == 1
+    assert updated_indexes[0].fields[0].name == "storageUrl"
 
 
 @pytest.mark.asyncio
@@ -277,8 +334,8 @@ async def test_remove_content(monkeypatch, search_info):
                 "id": "file-foo_pdf-666F6F2E706466-page-0",
                 "content": "test content",
                 "category": "test",
-                "sourcepage": "foo.pdf#page=1",
-                "sourcefile": "foo.pdf",
+                "sourcepage": "foo's bar.pdf#page=1",
+                "sourcefile": "foo's bar.pdf",
             }
         ]
     )
@@ -302,10 +359,10 @@ async def test_remove_content(monkeypatch, search_info):
 
     manager = SearchManager(search_info)
 
-    await manager.remove_content("foo.pdf")
+    await manager.remove_content("foo's bar.pdf")
 
     assert len(searched_filters) == 2, "It should have searched twice (with no results on second try)"
-    assert searched_filters[0] == "sourcefile eq 'foo.pdf'"
+    assert searched_filters[0] == "sourcefile eq 'foo''s bar.pdf'"
     assert len(deleted_documents) == 1, "It should have deleted one document"
     assert deleted_documents[0]["id"] == "file-foo_pdf-666F6F2E706466-page-0"
 
