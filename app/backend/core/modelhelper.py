@@ -14,10 +14,16 @@ MODELS_2_TOKEN_LIMITS = {
     "gpt-4": 8100,
     "gpt-4-32k": 32000,
     "gpt-4v": 128000,
+    "gpt-4o": 128000,
 }
 
 
-AOAI_2_OAI = {"gpt-35-turbo": "gpt-3.5-turbo", "gpt-35-turbo-16k": "gpt-3.5-turbo-16k", "gpt-4v": "gpt-4-turbo-vision"}
+AOAI_2_OAI = {
+    "gpt-35-turbo": "gpt-3.5-turbo",
+    "gpt-35-turbo-16k": "gpt-3.5-turbo-16k",
+    "gpt-4v": "gpt-4-turbo-vision",
+    "gpt-4o": "gpt-4o",
+}
 
 
 def get_token_limit(model_id: str) -> int:
@@ -41,7 +47,8 @@ def num_tokens_from_messages(message: Mapping[str, object], model: str) -> int:
         output: 11
     """
 
-    encoding = tiktoken.encoding_for_model(get_oai_chatmodel_tiktok(model))
+    # encoding = tiktoken.encoding_for_model(get_oai_chatmodel_tiktok(model))
+    encoding = tiktoken.get_encoding("cl100k_base")
     num_tokens = 2  # For "role" and "content" keys
     for value in message.values():
         if isinstance(value, list):

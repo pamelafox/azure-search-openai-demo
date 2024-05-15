@@ -164,13 +164,21 @@ class ChatApproach(Approach, ABC):
             ],
             "object": "chat.completion.chunk",
         }
+        # time this
+        import logging
+        import time
 
+        time_start = time.time()
+        timed_first = False
         followup_questions_started = False
         followup_content = ""
         async for event_chunk in await chat_coroutine:
             # "2023-07-01-preview" API version has a bug where first response has empty choices
             event = event_chunk.model_dump()  # Convert pydantic model to dict
             if event["choices"]:
+                if not timed_first:
+                    logging.info("Time to first event: %s", time.time() - time_start)
+                    timed_first = True
                 # if event contains << and not >>, it is start of follow-up question, truncate
                 content = event["choices"][0]["delta"].get("content")
                 content = content or ""  # content may either not exist in delta, or explicitly be None
@@ -185,6 +193,7 @@ class ChatApproach(Approach, ABC):
                     followup_content += content
                 else:
                     yield event
+        logging.info("Time taken for streaming: %s", time.time() - time_start)
         if followup_content:
             _, followup_questions = self.extract_followup_questions(followup_content)
             yield {
