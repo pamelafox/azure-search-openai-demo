@@ -9,6 +9,7 @@ param environmentName string
 @description('Primary location for all resources')
 param location string
 
+param keyVaultName string = '' // Set in main.parameters.json
 param appServicePlanName string = '' // Set in main.parameters.json
 param backendServiceName string = '' // Set in main.parameters.json
 param resourceGroupName string = '' // Set in main.parameters.json
@@ -66,6 +67,8 @@ param openAiApiOrganization string = ''
 
 param documentIntelligenceServiceName string = '' // Set in main.parameters.json
 param documentIntelligenceResourceGroupName string = '' // Set in main.parameters.json
+
+param useKeyVault bool = useAuthentication || !empty(vmPassword)
 
 // Limited regions for new version:
 // https://learn.microsoft.com/azure/ai-services/document-intelligence/concept-layout
@@ -125,9 +128,11 @@ param enableUnauthenticatedAccess bool = false
 param serverAppId string = ''
 @secure()
 param serverAppSecret string = ''
+param serverAppSecretName string = 'server-app-secret'
 param clientAppId string = ''
 @secure()
 param clientAppSecret string = ''
+param clientAppSecretName string = 'client-app-secret'
 
 // Used for optional CORS support for alternate frontends
 param allowedOrigin string = '' // should start with https://, shouldn't end with a /
@@ -148,6 +153,7 @@ param provisionVm bool = false
 param vmUserName string = ''
 @secure()
 param vmPassword string = ''
+param vmPasswordSecretName string = 'vm-password'
 param vmOsVersion string = ''
 param vmOsPublisher string = ''
 param vmOsOffer string = ''
@@ -209,6 +215,41 @@ resource searchServiceResourceGroup 'Microsoft.Resources/resourceGroups@2021-04-
 
 resource storageResourceGroup 'Microsoft.Resources/resourceGroups@2021-04-01' existing = if (!empty(storageResourceGroupName)) {
   name: !empty(storageResourceGroupName) ? storageResourceGroupName : resourceGroup.name
+}
+
+
+// Currently, we only need Key Vault for storing secrets for optional features (Auth, VM)
+module keyVault 'core/security/keyvault.bicep' = if (useKeyVault) {
+  name: 'keyvault'
+  scope: resourceGroup
+  params: {
+    name: !empty(keyVaultName) ? keyVaultName : '${abbrs.keyVaultVaults}${resourceToken}'
+    location: location
+    principalId: principalId
+  }
+}
+
+module webKVAccess 'core/security/keyvault-access.bicep' = if (useKeyVault) {
+  name: 'web-keyvault-access'
+  scope: resourceGroup
+  params: {
+    keyVaultName: useKeyVault ? keyVault.outputs.name : ''
+    principalId: backend.outputs.identityPrincipalId
+  }
+}
+
+module secrets 'secrets.bicep' = if (useKeyVault && !empty(clientAppSecret) || !empty(serverAppSecret) || !empty(vmPassword)) {
+    name: 'secrets'
+    scope: resourceGroup
+    params: {
+      keyVaultName: keyVault.outputs.name
+      clientAppSecretName: clientAppSecretName
+      clientAppSecret: clientAppSecret
+      serverAppSecretName: serverAppSecretName
+      serverAppSecret: serverAppSecret
+      vmPasswordSecretName: vmPasswordSecretName
+      vmPassword: vmPassword
+  }
 }
 
 // Monitor application with Azure Monitor
@@ -306,9 +347,11 @@ module backend 'core/host/appservice.bicep' = {
       AZURE_ENABLE_GLOBAL_DOCUMENTS: enableGlobalDocuments
       AZURE_ENABLE_UNAUTHENTICATED_ACCESS: enableUnauthenticatedAccess
       AZURE_SERVER_APP_ID: serverAppId
-      AZURE_SERVER_APP_SECRET: serverAppSecret
+      AZURE_SERVER_APP_SECRET_NAME: serverAppSecretName
+      AZURE_SERVER_APP_SECRET: '@Microsoft.KeyVault(VaultName=${keyVault.outputs.name};SecretName=${serverAppSecretName})'
       AZURE_CLIENT_APP_ID: clientAppId
-      AZURE_CLIENT_APP_SECRET: clientAppSecret
+      AZURE_CLIENT_APP_SECRET_NAME: clientAppSecretName
+      AZURE_CLIENT_APP_SECRET: '@Microsoft.KeyVault(VaultName=${keyVault.outputs.name};SecretName=${clientAppSecretName})'
       AZURE_TENANT_ID: tenantId
       AZURE_AUTH_TENANT_ID: tenantIdForAuth
       AZURE_AUTHENTICATION_ISSUER_URI: authenticationIssuerUri

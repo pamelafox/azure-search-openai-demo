@@ -9,6 +9,7 @@ from typing import Any, AsyncGenerator, Dict, Union, cast
 
 from azure.core.exceptions import ResourceNotFoundError
 from azure.identity.aio import DefaultAzureCredential, get_bearer_token_provider
+from azure.keyvault.secrets.aio import SecretClient
 from azure.monitor.opentelemetry import configure_azure_monitor
 from azure.search.documents.aio import SearchClient
 from azure.search.documents.indexes.aio import SearchIndexClient
@@ -325,10 +326,11 @@ async def setup_clients():
     AZURE_ENFORCE_ACCESS_CONTROL = os.getenv("AZURE_ENFORCE_ACCESS_CONTROL", "").lower() == "true"
     AZURE_ENABLE_GLOBAL_DOCUMENT_ACCESS = os.getenv("AZURE_ENABLE_GLOBAL_DOCUMENT_ACCESS", "").lower() == "true"
     AZURE_ENABLE_UNAUTHENTICATED_ACCESS = os.getenv("AZURE_ENABLE_UNAUTHENTICATED_ACCESS", "").lower() == "true"
-    AZURE_SERVER_APP_ID = os.getenv("AZURE_SERVER_APP_ID")
-    AZURE_SERVER_APP_SECRET = os.getenv("AZURE_SERVER_APP_SECRET")
-    AZURE_CLIENT_APP_ID = os.getenv("AZURE_CLIENT_APP_ID")
     AZURE_AUTH_TENANT_ID = os.getenv("AZURE_AUTH_TENANT_ID", AZURE_TENANT_ID)
+    AZURE_SERVER_APP_ID = os.getenv("AZURE_SERVER_APP_ID")
+    AZURE_CLIENT_APP_ID = os.getenv("AZURE_CLIENT_APP_ID")
+    AZURE_SERVER_APP_SECRET_NAME = os.getenv("AZURE_SERVER_APP_SECRET_NAME")
+    AZURE_KEY_VAULT_NAME = os.getenv("AZURE_KEY_VAULT_NAME")
 
     KB_FIELDS_CONTENT = os.getenv("KB_FIELDS_CONTENT", "content")
     KB_FIELDS_SOURCEPAGE = os.getenv("KB_FIELDS_SOURCEPAGE", "sourcepage")
@@ -359,6 +361,7 @@ async def setup_clients():
 
     # Set up authentication helper
     search_index = None
+    server_app_secret = None
     if AZURE_USE_AUTHENTICATION:
         search_index_client = SearchIndexClient(
             endpoint=f"https://{AZURE_SEARCH_SERVICE}.search.windows.net",
@@ -366,11 +369,15 @@ async def setup_clients():
         )
         search_index = await search_index_client.get_index(AZURE_SEARCH_INDEX)
         await search_index_client.close()
+        async with SecretClient(
+            vault_url=f"https://{AZURE_KEY_VAULT_NAME}.vault.azure.net", credential=azure_credential
+        ) as key_vault_client:
+            server_app_secret = (await key_vault_client.get_secret(AZURE_SERVER_APP_SECRET_NAME)).value
     auth_helper = AuthenticationHelper(
         search_index=search_index,
         use_authentication=AZURE_USE_AUTHENTICATION,
         server_app_id=AZURE_SERVER_APP_ID,
-        server_app_secret=AZURE_SERVER_APP_SECRET,
+        server_app_secret=server_app_secret,
         client_app_id=AZURE_CLIENT_APP_ID,
         tenant_id=AZURE_AUTH_TENANT_ID,
         require_access_control=AZURE_ENFORCE_ACCESS_CONTROL,

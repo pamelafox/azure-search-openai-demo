@@ -31,6 +31,7 @@ azure-core==1.30.1
     #   azure-ai-documentintelligence
     #   azure-core-tracing-opentelemetry
     #   azure-identity
+    #   azure-keyvault-secrets
     #   azure-monitor-opentelemetry
     #   azure-monitor-opentelemetry-exporter
     #   azure-search-documents
@@ -44,6 +45,8 @@ azure-identity==1.16.0
     # via
     #   -r requirements.in
     #   msgraph-sdk
+azure-keyvault-secrets==4.8.0
+    # via -r requirements.in
 azure-monitor-opentelemetry==1.4.2
     # via -r requirements.in
 azure-monitor-opentelemetry-exporter==1.0.0b25
@@ -135,6 +138,7 @@ importlib-metadata==7.0.0
 isodate==0.6.1
     # via
     #   azure-ai-documentintelligence
+    #   azure-keyvault-secrets
     #   azure-search-documents
     #   azure-storage-blob
     #   azure-storage-file-datalake
@@ -334,9 +338,7 @@ pydantic==2.7.1
 pydantic-core==2.18.2
     # via pydantic
 pyjwt[crypto]==2.8.0
-    # via
-    #   msal
-    #   pyjwt
+    # via msal
 pymupdf==1.24.4
     # via -r requirements.in
 pymupdfb==1.24.3
@@ -413,6 +415,7 @@ typing-extensions==4.11.0
     # via
     #   azure-ai-documentintelligence
     #   azure-core
+    #   azure-keyvault-secrets
     #   azure-storage-blob
     #   azure-storage-file-datalake
     #   openai

@@ -61,6 +61,8 @@ class AuthenticationHelper:
         self.key_url = f"{self.authority}/discovery/v2.0/keys"
 
         if self.use_authentication:
+            if server_app_secret is None:
+                raise ValueError("server_app_secret must be provided when use_authentication is True")
             field_names = [field.name for field in search_index.fields] if search_index else []
             self.has_auth_fields = "oids" in field_names and "groups" in field_names
             self.require_access_control = require_access_control
