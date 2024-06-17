@@ -17,6 +17,9 @@
     "openAiServiceName": {
       "value": "${AZURE_OPENAI_SERVICE}"
     },
+    "openAiGlobalServiceName": {
+      "value": "${AZURE_OPENAI_GLOBAL_SERVICE}"
+    },
     "openAiResourceGroupName": {
       "value": "${AZURE_OPENAI_RESOURCE_GROUP}"
     },

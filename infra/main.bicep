@@ -47,6 +47,7 @@ param azureOpenAiCustomUrl string = ''
 param azureOpenAiApiVersion string = ''
 
 param openAiServiceName string = ''
+param openAiGlobalServiceName string = ''
 param openAiResourceGroupName string = ''
 
 param speechServiceResourceGroupName string = ''
@@ -118,6 +119,9 @@ param gpt4vModelName string = 'gpt-4o'
 param gpt4vDeploymentName string = 'gpt-4o'
 param gpt4vModelVersion string = '2024-05-13'
 param gpt4vDeploymentCapacity int = 10
+// For more SKU details, see https://learn.microsoft.com/azure/ai-services/openai/how-to/deployment-types#deployment-types
+// You may need to change this to 'Standard' if you need data residency guarantees
+param gpt4vDeploymentSku string = 'GlobalStandard'
 
 param tenantId string = tenant().tenantId
 param authTenantId string = ''
@@ -372,21 +376,6 @@ var defaultOpenAiDeployments = [
   }
 ]
 
-var openAiDeployments = concat(defaultOpenAiDeployments, useGPT4V ? [
-    {
-      name: gpt4vDeploymentName
-      model: {
-        format: 'OpenAI'
-        name: gpt4vModelName
-        version: gpt4vModelVersion
-      }
-      sku: {
-        name: 'Standard'
-        capacity: gpt4vDeploymentCapacity
-      }
-    }
-  ] : [])
-
 module openAi 'core/ai/cognitiveservices.bicep' = if (isAzureOpenAiHost) {
   name: 'openai'
   scope: openAiResourceGroup
@@ -399,7 +388,35 @@ module openAi 'core/ai/cognitiveservices.bicep' = if (isAzureOpenAiHost) {
     sku: {
       name: openAiSkuName
     }
-    deployments: openAiDeployments
+    deployments: defaultOpenAiDeployments
+    disableLocalAuth: true
+  }
+}
+
+// Houses the deployments that use the GlobalStandard SKU (no location)
+module openAiGlobal 'core/ai/cognitiveservices.bicep' = if (isAzureOpenAiHost) {
+  name: 'openai-global'
+  scope: openAiResourceGroup
+  params: {
+    name: !empty(openAiGlobalServiceName) ? openAiGlobalServiceName : '${abbrs.cognitiveServicesAccounts}global${resourceToken}'
+    tags: tags
+    publicNetworkAccess: publicNetworkAccess
+    bypass: bypass
+    sku: {
+      name: openAiSkuName
+    }
+    deployments: [{
+      name: gpt4vDeploymentName
+      model: {
+        format: 'OpenAI'
+        name: gpt4vModelName
+        version: gpt4vModelVersion
+      }
+      sku: {
+        name: gpt4vDeploymentSku
+        capacity: gpt4vDeploymentCapacity
+      }
+    }]
     disableLocalAuth: true
   }
 }
