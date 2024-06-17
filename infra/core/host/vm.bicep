@@ -66,3 +66,6 @@ resource vm 'Microsoft.Compute/virtualMachines@2022-03-01' = {
     securityProfile: ((securityType == 'TrustedLaunch') ? securityProfileJson : null)
   }
 }
+
+output name string = vm.name
+output id string = vm.id

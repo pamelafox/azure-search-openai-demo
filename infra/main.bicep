@@ -772,6 +772,16 @@ module vm 'core/host/vm.bicep' = if (provisionVm && usePrivateEndpoint) {
   }
 }
 
+module vmDiagnostics 'core/host/vm-diagnostics.bicep' = if (provisionVm && usePrivateEndpoint) {
+  name: 'vm-diagnostics'
+  scope: resourceGroup
+  params: {
+    location: location
+    vmName: vm.outputs.name
+    applicationInsightsId: monitoring.outputs.applicationInsightsId
+  }
+}
+
 // Used to read index definitions (required when using authentication)
 // https://learn.microsoft.com/azure/search/search-security-rbac
 module searchReaderRoleBackend 'core/security/role.bicep' = if (useAuthentication) {
