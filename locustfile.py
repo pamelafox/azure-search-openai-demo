@@ -1,7 +1,29 @@
+import json
+import logging
+import os
 import random
+import subprocess
 import time
 
+from azure.identity import AzureDeveloperCliCredential
+from dotenv import load_dotenv
 from locust import HttpUser, between, task
+
+
+def load_azd_env():
+    """Get path to current azd env file and load file using python-dotenv"""
+    result = subprocess.run("azd env list -o json", shell=True, capture_output=True, text=True)
+    if result.returncode != 0:
+        raise Exception("Error loading azd env")
+    env_json = json.loads(result.stdout)
+    env_file_path = None
+    for entry in env_json:
+        if entry["IsDefault"]:
+            env_file_path = entry["DotEnvPath"]
+    if not env_file_path:
+        raise Exception("No default azd env file found")
+    logging.info(f"Loading azd env from {env_file_path}")
+    load_dotenv(env_file_path, override=True)
 
 
 class ChatUser(HttpUser):
@@ -9,7 +31,13 @@ class ChatUser(HttpUser):
 
     @task
     def ask_question(self):
-        self.client.get("/")
+        load_azd_env()
+        token = AzureDeveloperCliCredential().get_token(
+            f"api://{os.environ['AZURE_SERVER_APP_ID']}/access_as_user",
+            tenant_id=os.getenv("AZURE_AUTH_TENANT_ID", os.getenv("AZURE_TENANT_ID")),
+        )
+
+        self.client.get("/", headers={"Authorization": f"Bearer {token.token}"})
         time.sleep(5)
         self.client.post(
             "/chat",

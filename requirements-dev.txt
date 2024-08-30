@@ -13,3 +13,4 @@ pre-commit
 locust
 pip-tools
 mypy
+python-dotenv
