@@ -27,7 +27,7 @@ If the maximum TPM isn't enough for your expected load, you have a few options:
 * If you are consistently going over the TPM, then consider implementing a load balancer between OpenAI instances. Most developers implement that using Azure API Management or container-based load balancers. A native Python approach that integrates with the OpenAI Python API Library is also possible. For integration instructions with this sample, please check:
   * [Scale Azure OpenAI for Python with Azure API Management](https://learn.microsoft.com/azure/developer/python/get-started-app-chat-scaling-with-azure-api-management)
   * [Scale Azure OpenAI for Python chat using RAG with Azure Container Apps](https://learn.microsoft.com/azure/developer/python/get-started-app-chat-scaling-with-azure-container-apps)
-  * [Pull request: Scale Azure OpenAI for Python with the Python openai-priority-loadbalancer](https://github.com/Azure-Samples/azure-search-openai-demo/pull/1626)   
+  * [Pull request: Scale Azure OpenAI for Python with the Python openai-priority-loadbalancer](https://github.com/Azure-Samples/azure-search-openai-demo/pull/1626)
 
 ### Azure Storage
 
@@ -37,16 +37,36 @@ which you can specify using the `sku` property under the `storage` module in `in
 
 ### Azure AI Search
 
-The default search service uses the `Standard` SKU
-with the free semantic search option, which gives you 1000 free queries a month.
-Assuming your app will experience more than 1000 questions, you should either change `semanticSearch`
-to "standard" or disable semantic search entirely in the `/app/backend/approaches` files.
-If you see errors about search service capacity being exceeded, you may find it helpful to increase
+The default search service uses the "Basic" SKU
+with the free semantic ranker option, which gives you 1000 free queries a month.
+After 1000 queries, you will get an error message about exceeding the semantic ranker free capacity.
+
+* Assuming your app will experience more than 1000 questions per month,
+  you should upgrade the semantic ranker SKU from "free" to "standard" SKU:
+
+  ```shell
+  azd env set AZURE_SEARCH_SEMANTIC_RANKER standard
+  ```
+
+  Or disable semantic search entirely:
+
+  ```shell
+  azd env set AZURE_SEARCH_SEMANTIC_RANKER disabled
+  ```
+
+* The search service can handle fairly large indexes, but it does have per-SKU limits on storage sizes, maximum vector dimensions, etc. You may want to upgrade the SKU to either a Standard or Storage Optimized SKU, depending on your expected load.
+However, you [cannot change the SKU](https://learn.microsoft.com/azure/search/search-sku-tier#tier-upgrade-or-downgrade) of an existing search service, so you will need to re-index the data or manually copy it over.
+You can change the SKU by setting the `AZURE_SEARCH_SERVICE_SKU` azd environment variable to [an allowed SKU](https://learn.microsoft.com/azure/templates/microsoft.search/searchservices?pivots=deployment-language-bicep#sku).
+
+  ```shell
+  azd env set AZURE_SEARCH_SERVICE_SKU standard
+  ```
+
+  See the [Azure AI Search service limits documentation](https://learn.microsoft.com/azure/search/search-limits-quotas-capacity) for more details.
+
+* If you see errors about search service capacity being exceeded, you may find it helpful to increase
 the number of replicas by changing `replicaCount` in `infra/core/search/search-services.bicep`
 or manually scaling it from the Azure Portal.
-
-The search service can handle fairly large indexes, but it does have per-SKU limits on storage sizes, maximum vector dimensions, etc.
-See the [service limits document](https://learn.microsoft.com/azure/search/search-limits-quotas-capacity) for more details.
 
 ### Azure App Service
 

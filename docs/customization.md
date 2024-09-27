@@ -5,7 +5,6 @@ This guide provides more details for customizing the Chat App.
 - [Using your own data](#using-your-own-data)
 - [Customizing the UI](#customizing-the-ui)
 - [Customizing the backend](#customizing-the-backend)
-  - [Chat/Ask approaches](#chatask-approaches)
 - [Improving answer quality](#improving-answer-quality)
   - [Identify the problem point](#identify-the-problem-point)
   - [Improving OpenAI ChatCompletion results](#improving-openai-chatcompletion-results)
@@ -18,16 +17,11 @@ The Chat App is designed to work with any PDF documents. The sample data is prov
 
 ## Customizing the UI
 
-The frontend is built using [React](https://reactjs.org/) and [Fluent UI components](https://react.fluentui.dev/). The frontend components are stored in the `app/frontend/src` folder. The typical components you'll want to customize are:
-
-- `app/frontend/index.html`: To change the page title
-- `app/frontend/src/pages/layout/Layout.tsx`: To change the header text and logo
-- `app/frontend/src/pages/chat/Chat.tsx`: To change the large heading
-- `app/frontend/src/components/Example/ExampleList.tsx`: To change the example questions
+The frontend is built using [React](https://reactjs.org/) and [Fluent UI components](https://react.fluentui.dev/). The frontend components are stored in the `app/frontend/src` folder. To modify the page title, header text, example questions, and other UI elements, you can customize the `app/frontend/src/locales/{en/es/fr/jp}/translation.json` file for different languages(English is the default). The primary strings and labels used throughout the application are defined within these files.
 
 ## Customizing the backend
 
-The backend is built using [Quart](https://quart.palletsprojects.com/), a Python framework for asynchronous web applications. The backend code is stored in the `app/backend` folder. The frontend and backend communicate using the [AI Chat App HTTP Protocol](https://github.com/Azure-Samples/ai-chat-app-protocol).
+The backend is built using [Quart](https://quart.palletsprojects.com/), a Python framework for asynchronous web applications. The backend code is stored in the `app/backend` folder. The frontend and backend communicate using the [AI Chat HTTP Protocol](https://aka.ms/chatprotocol).
 
 ### Chat/Ask tabs
 
@@ -77,24 +71,24 @@ However, if you find a setting that you do want to make permanent, there are two
 
 1. Change the defaults in the frontend. You'll find the defaults in `Chat.tsx` and `Ask.tsx`. For example, this line of code sets the default retrieval mode to Hybrid:
 
-```typescript
-const [retrievalMode, setRetrievalMode] = useState<RetrievalMode>(RetrievalMode.Hybrid);
-```
+    ```typescript
+    const [retrievalMode, setRetrievalMode] = useState<RetrievalMode>(RetrievalMode.Hybrid);
+    ```
 
-You can change the default to Text by changing the code to:
+    You can change the default to Text by changing the code to:
 
-```typescript
-const [retrievalMode, setRetrievalMode] = useState<RetrievalMode>(RetrievalMode.Text);
-```
+    ```typescript
+    const [retrievalMode, setRetrievalMode] = useState<RetrievalMode>(RetrievalMode.Text);
+    ```
 
 2. Change the overrides in the backend. Each of the approaches has a `run` method that takes a `context` parameter, and the first line of code extracts the overrides from that `context`. That's where you can override any of the settings. For example, to change the retrieval mode to text:
 
-```python
-overrides = context.get("overrides", {})
-overrides["retrieval_mode"] = "text"
-```
+    ```python
+    overrides = context.get("overrides", {})
+    overrides["retrieval_mode"] = "text"
+    ```
 
-By changing the setting on the backend, you can safely remove the Developer Settings UI from the frontend, if you don't wish to expose that to your users.
+    By changing the setting on the backend, you can safely remove the Developer Settings UI from the frontend, if you don't wish to expose that to your users.
 
 ## Improving answer quality
 
@@ -123,9 +117,9 @@ You can also try changing the ChatCompletion parameters, like temperature, to se
 
 ### Improving Azure AI Search results
 
-If the problem is with Azure AI Search (step 2 above), the first step is to check what search parameters you're using. Generally, the best results are found with hybrid search (text + vectors) plus the additional semantic re-ranking step, and that's what we've enabled by default. There may be some domains where that combination isn't optimal, however.
+If the problem is with Azure AI Search (step 2 above), the first step is to check what search parameters you're using. Generally, the best results are found with hybrid search (text + vectors) plus the additional semantic re-ranking step, and that's what we've enabled by default. There may be some domains where that combination isn't optimal, however. Check out this blog post which [evaluates AI search strategies](https://techcommunity.microsoft.com/t5/ai-azure-ai-services-blog/azure-ai-search-outperforming-vector-search-with-hybrid/ba-p/3929167) for a better understanding of the differences.
 
-##### Configuring parameters in the app
+#### Configuring parameters in the app
 
 You can change many of the search parameters in the "Developer settings" in the frontend and see if results improve for your queries. The most relevant options:
 
@@ -163,6 +157,14 @@ You can also use the `highlight` parameter to see what text is being matched in 
 
 The search explorer works well for testing text, but is harder to use with vectors, since you'd also need to compute the vector embedding and send it in. It is probably easier to use the app frontend for testing vectors/hybrid search.
 
+#### Other approaches to improve search results
+
+Here are additional ways for improving the search results:
+
+- Adding additional metadata to the "content" field, like the document title, so that it can be matched in the search results. Modify [searchmanager.py](https://github.com/Azure-Samples/azure-search-openai-demo/blob/main/app/backend/prepdocslib/searchmanager.py) to include more text in the `content` field.
+- Making additional fields searchable by the full text search step. For example, the "sourcepage" field is not currently searchable, but you could make that into a `SearchableField` with `searchable=True` in [searchmanager.py](https://github.com/Azure-Samples/azure-search-openai-demo/blob/main/app/backend/prepdocslib/searchmanager.py). A change like that requires [re-building the index](https://learn.microsoft.com/azure/search/search-howto-reindex#change-an-index-schema).
+- Using function calling to search by particular fields, like searching by the filename. See this blog post on [function calling for structured retrieval](https://blog.pamelafox.org/2024/03/rag-techniques-using-function-calling.html).
+- Using a different splitting strategy for the documents, or modifying the existing ones, to improve the chunks that are indexed. You can find the currently available splitters in [textsplitter.py](https://github.com/Azure-Samples/azure-search-openai-demo/blob/main/app/backend/prepdocslib/textsplitter.py).
 
 ### Evaluating answer quality
 

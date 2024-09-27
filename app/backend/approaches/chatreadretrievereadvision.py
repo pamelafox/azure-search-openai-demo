@@ -63,7 +63,7 @@ class ChatReadRetrieveReadVisionApproach(ChatApproach):
         self.query_speller = query_speller
         self.vision_endpoint = vision_endpoint
         self.vision_token_provider = vision_token_provider
-        self.chatgpt_token_limit = get_token_limit(gpt4v_model)
+        self.chatgpt_token_limit = get_token_limit(gpt4v_model, default_to_minimum=self.ALLOW_NON_GPT_MODELS)
 
     @property
     def system_message_chat_conversation(self):
@@ -75,7 +75,6 @@ class ChatReadRetrieveReadVisionApproach(ChatApproach):
         Answer the following question using only the data provided in the sources below.
         If asking a clarifying question to the user would help, ask the question.
         Be brief in your answers.
-        For tabular information return it as an html table. Do not return markdown format.
         The text and image source can be the same file name, don't use the image title when citing the image source, only use the file name as mentioned
         If you cannot answer using the sources below, say you don't know. Return just the answer without any input texts.
         {follow_up_questions_prompt}
@@ -89,18 +88,19 @@ class ChatReadRetrieveReadVisionApproach(ChatApproach):
         auth_claims: dict[str, Any],
         should_stream: bool = False,
     ) -> tuple[dict[str, Any], Coroutine[Any, Any, Union[ChatCompletion, AsyncStream[ChatCompletionChunk]]]]:
-        has_text = overrides.get("retrieval_mode") in ["text", "hybrid", None]
-        has_vector = overrides.get("retrieval_mode") in ["vectors", "hybrid", None]
-        vector_fields = overrides.get("vector_fields", ["embedding"])
-        use_semantic_captions = True if overrides.get("semantic_captions") and has_text else False
+        seed = overrides.get("seed", None)
+        use_text_search = overrides.get("retrieval_mode") in ["text", "hybrid", None]
+        use_vector_search = overrides.get("retrieval_mode") in ["vectors", "hybrid", None]
+        use_semantic_ranker = True if overrides.get("semantic_ranker") else False
+        use_semantic_captions = True if overrides.get("semantic_captions") else False
         top = overrides.get("top", 3)
         minimum_search_score = overrides.get("minimum_search_score", 0.0)
         minimum_reranker_score = overrides.get("minimum_reranker_score", 0.0)
         filter = self.build_filter(overrides, auth_claims)
-        use_semantic_ranker = True if overrides.get("semantic_ranker") and has_text else False
 
-        include_gtpV_text = overrides.get("gpt4v_input") in ["textAndImages", "texts", None]
-        include_gtpV_images = overrides.get("gpt4v_input") in ["textAndImages", "images", None]
+        vector_fields = overrides.get("vector_fields", ["embedding"])
+        send_text_to_gptvision = overrides.get("gpt4v_input") in ["textAndImages", "texts", None]
+        send_images_to_gptvision = overrides.get("gpt4v_input") in ["textAndImages", "images", None]
 
         original_user_query = messages[-1]["content"]
         if not isinstance(original_user_query, str):
@@ -128,6 +128,7 @@ class ChatReadRetrieveReadVisionApproach(ChatApproach):
             temperature=0.0,  # Minimize creativity for search query generation
             max_tokens=query_response_token_limit,
             n=1,
+            seed=seed,
         )
 
         query_text = self.get_search_query(chat_completion, original_user_query)
@@ -136,7 +137,7 @@ class ChatReadRetrieveReadVisionApproach(ChatApproach):
 
         # If retrieval mode includes vectors, compute an embedding for the query
         vectors = []
-        if has_vector:
+        if use_vector_search:
             for field in vector_fields:
                 vector = (
                     await self.compute_text_embedding(query_text)
@@ -145,15 +146,13 @@ class ChatReadRetrieveReadVisionApproach(ChatApproach):
                 )
                 vectors.append(vector)
 
-        # Only keep the text query if the retrieval mode uses text, otherwise drop it
-        if not has_text:
-            query_text = None
-
         results = await self.search(
             top,
             query_text,
             filter,
             vectors,
+            use_text_search,
+            use_vector_search,
             use_semantic_ranker,
             use_semantic_captions,
             minimum_search_score,
@@ -173,9 +172,9 @@ class ChatReadRetrieveReadVisionApproach(ChatApproach):
         user_content: list[ChatCompletionContentPartParam] = [{"text": original_user_query, "type": "text"}]
         image_list: list[ChatCompletionContentPartImageParam] = []
 
-        if include_gtpV_text:
+        if send_text_to_gptvision:
             user_content.append({"text": "\n\nSources:\n" + content, "type": "text"})
-        if include_gtpV_images:
+        if send_images_to_gptvision:
             for result in results:
                 url = await fetch_image(self.blob_container_client, result)
                 if url:
@@ -189,6 +188,7 @@ class ChatReadRetrieveReadVisionApproach(ChatApproach):
             past_messages=messages[:-1],
             new_user_content=user_content,
             max_tokens=self.chatgpt_token_limit - response_token_limit,
+            fallback_to_default=self.ALLOW_NON_GPT_MODELS,
         )
 
         data_points = {
@@ -201,7 +201,7 @@ class ChatReadRetrieveReadVisionApproach(ChatApproach):
             "thoughts": [
                 ThoughtStep(
                     "Prompt to generate search query",
-                    [str(message) for message in query_messages],
+                    query_messages,
                     (
                         {"model": query_model, "deployment": query_deployment}
                         if query_deployment
@@ -217,6 +217,7 @@ class ChatReadRetrieveReadVisionApproach(ChatApproach):
                         "top": top,
                         "filter": filter,
                         "vector_fields": vector_fields,
+                        "use_text_search": use_text_search,
                     },
                 ),
                 ThoughtStep(
@@ -225,7 +226,7 @@ class ChatReadRetrieveReadVisionApproach(ChatApproach):
                 ),
                 ThoughtStep(
                     "Prompt to generate answer",
-                    [str(message) for message in messages],
+                    messages,
                     (
                         {"model": self.gpt4v_model, "deployment": self.gpt4v_deployment}
                         if self.gpt4v_deployment
@@ -242,5 +243,6 @@ class ChatReadRetrieveReadVisionApproach(ChatApproach):
             max_tokens=response_token_limit,
             n=1,
             stream=should_stream,
+            seed=seed,
         )
         return (extra_info, chat_coroutine)

@@ -28,7 +28,6 @@ class RetrieveThenReadVisionApproach(Approach):
         + "Each text source starts in a new line and has the file name followed by colon and the actual information "
         + "Always include the source name from the image or text for each fact you use in the response in the format: [filename] "
         + "Answer the following question using only the data provided in the sources below. "
-        + "For tabular information return it as an html table. Do not return markdown format. "
         + "The text and image source can be the same file name, don't use the image title when citing the image source, only use the file name as mentioned "
         + "If you cannot answer using the sources below, say you don't know. Return just the answer without any input texts "
     )
@@ -67,7 +66,7 @@ class RetrieveThenReadVisionApproach(Approach):
         self.query_speller = query_speller
         self.vision_endpoint = vision_endpoint
         self.vision_token_provider = vision_token_provider
-        self.gpt4v_token_limit = get_token_limit(gpt4v_model)
+        self.gpt4v_token_limit = get_token_limit(gpt4v_model, self.ALLOW_NON_GPT_MODELS)
 
     async def run(
         self,
@@ -80,25 +79,24 @@ class RetrieveThenReadVisionApproach(Approach):
             raise ValueError("The most recent message content must be a string.")
 
         overrides = context.get("overrides", {})
+        seed = overrides.get("seed", None)
         auth_claims = context.get("auth_claims", {})
-        has_text = overrides.get("retrieval_mode") in ["text", "hybrid", None]
-        has_vector = overrides.get("retrieval_mode") in ["vectors", "hybrid", None]
-        vector_fields = overrides.get("vector_fields", ["embedding"])
-
-        include_gtpV_text = overrides.get("gpt4v_input") in ["textAndImages", "texts", None]
-        include_gtpV_images = overrides.get("gpt4v_input") in ["textAndImages", "images", None]
-
-        use_semantic_captions = True if overrides.get("semantic_captions") and has_text else False
+        use_text_search = overrides.get("retrieval_mode") in ["text", "hybrid", None]
+        use_vector_search = overrides.get("retrieval_mode") in ["vectors", "hybrid", None]
+        use_semantic_ranker = True if overrides.get("semantic_ranker") else False
+        use_semantic_captions = True if overrides.get("semantic_captions") else False
         top = overrides.get("top", 3)
         minimum_search_score = overrides.get("minimum_search_score", 0.0)
         minimum_reranker_score = overrides.get("minimum_reranker_score", 0.0)
         filter = self.build_filter(overrides, auth_claims)
-        use_semantic_ranker = overrides.get("semantic_ranker") and has_text
+
+        vector_fields = overrides.get("vector_fields", ["embedding"])
+        send_text_to_gptvision = overrides.get("gpt4v_input") in ["textAndImages", "texts", None]
+        send_images_to_gptvision = overrides.get("gpt4v_input") in ["textAndImages", "images", None]
 
         # If retrieval mode includes vectors, compute an embedding for the query
-
         vectors = []
-        if has_vector:
+        if use_vector_search:
             for field in vector_fields:
                 vector = (
                     await self.compute_text_embedding(q)
@@ -107,14 +105,13 @@ class RetrieveThenReadVisionApproach(Approach):
                 )
                 vectors.append(vector)
 
-        # Only keep the text query if the retrieval mode uses text, otherwise drop it
-        query_text = q if has_text else None
-
         results = await self.search(
             top,
-            query_text,
+            q,
             filter,
             vectors,
+            use_text_search,
+            use_vector_search,
             use_semantic_ranker,
             use_semantic_captions,
             minimum_search_score,
@@ -127,10 +124,10 @@ class RetrieveThenReadVisionApproach(Approach):
         # Process results
         sources_content = self.get_sources_content(results, use_semantic_captions, use_image_citation=True)
 
-        if include_gtpV_text:
+        if send_text_to_gptvision:
             content = "\n".join(sources_content)
             user_content.append({"text": content, "type": "text"})
-        if include_gtpV_images:
+        if send_images_to_gptvision:
             for result in results:
                 url = await fetch_image(self.blob_container_client, result)
                 if url:
@@ -143,16 +140,16 @@ class RetrieveThenReadVisionApproach(Approach):
             system_prompt=overrides.get("prompt_template", self.system_chat_template_gpt4v),
             new_user_content=user_content,
             max_tokens=self.gpt4v_token_limit - response_token_limit,
+            fallback_to_default=self.ALLOW_NON_GPT_MODELS,
         )
-        chat_completion = (
-            await self.openai_client.chat.completions.create(
-                model=self.gpt4v_deployment if self.gpt4v_deployment else self.gpt4v_model,
-                messages=updated_messages,
-                temperature=overrides.get("temperature", 0.3),
-                max_tokens=response_token_limit,
-                n=1,
-            )
-        ).model_dump()
+        chat_completion = await self.openai_client.chat.completions.create(
+            model=self.gpt4v_deployment if self.gpt4v_deployment else self.gpt4v_model,
+            messages=updated_messages,
+            temperature=overrides.get("temperature", 0.3),
+            max_tokens=response_token_limit,
+            n=1,
+            seed=seed,
+        )
 
         data_points = {
             "text": sources_content,
@@ -164,13 +161,15 @@ class RetrieveThenReadVisionApproach(Approach):
             "thoughts": [
                 ThoughtStep(
                     "Search using user query",
-                    query_text,
+                    q,
                     {
                         "use_semantic_captions": use_semantic_captions,
                         "use_semantic_ranker": use_semantic_ranker,
                         "top": top,
                         "filter": filter,
                         "vector_fields": vector_fields,
+                        "use_vector_search": use_vector_search,
+                        "use_text_search": use_text_search,
                     },
                 ),
                 ThoughtStep(
@@ -179,7 +178,7 @@ class RetrieveThenReadVisionApproach(Approach):
                 ),
                 ThoughtStep(
                     "Prompt to generate answer",
-                    [str(message) for message in updated_messages],
+                    updated_messages,
                     (
                         {"model": self.gpt4v_model, "deployment": self.gpt4v_deployment}
                         if self.gpt4v_deployment
@@ -189,8 +188,11 @@ class RetrieveThenReadVisionApproach(Approach):
             ],
         }
 
-        completion = {}
-        completion["message"] = chat_completion["choices"][0]["message"]
-        completion["context"] = extra_info
-        completion["session_state"] = session_state
-        return completion
+        return {
+            "message": {
+                "content": chat_completion.choices[0].message.content,
+                "role": chat_completion.choices[0].message.role,
+            },
+            "context": extra_info,
+            "session_state": session_state,
+        }

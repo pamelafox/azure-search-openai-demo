@@ -21,7 +21,6 @@ class RetrieveThenReadApproach(Approach):
         "You are an intelligent assistant helping Contoso Inc employees with their healthcare plan questions and employee handbook questions. "
         + "Use 'you' to refer to the individual asking the questions even if they ask with 'I'. "
         + "Answer the following question using only the data provided in the sources below. "
-        + "For tabular information return it as an html table. Do not return markdown format. "
         + "Each source has a name followed by colon and the actual information, always include the source name for each fact you use in the response. "
         + "If you cannot answer using the sources below, say you don't know. Use below example to answer"
     )
@@ -67,7 +66,7 @@ info4.pdf: In-network institutions include Overlake, Swedish and others in the r
         self.content_field = content_field
         self.query_language = query_language
         self.query_speller = query_speller
-        self.chatgpt_token_limit = get_token_limit(chatgpt_model)
+        self.chatgpt_token_limit = get_token_limit(chatgpt_model, self.ALLOW_NON_GPT_MODELS)
 
     async def run(
         self,
@@ -79,29 +78,29 @@ info4.pdf: In-network institutions include Overlake, Swedish and others in the r
         if not isinstance(q, str):
             raise ValueError("The most recent message content must be a string.")
         overrides = context.get("overrides", {})
+        seed = overrides.get("seed", None)
         auth_claims = context.get("auth_claims", {})
-        has_text = overrides.get("retrieval_mode") in ["text", "hybrid", None]
-        has_vector = overrides.get("retrieval_mode") in ["vectors", "hybrid", None]
-        use_semantic_ranker = overrides.get("semantic_ranker") and has_text
-
-        use_semantic_captions = True if overrides.get("semantic_captions") and has_text else False
+        use_text_search = overrides.get("retrieval_mode") in ["text", "hybrid", None]
+        use_vector_search = overrides.get("retrieval_mode") in ["vectors", "hybrid", None]
+        use_semantic_ranker = True if overrides.get("semantic_ranker") else False
+        use_semantic_captions = True if overrides.get("semantic_captions") else False
         top = overrides.get("top", 3)
         minimum_search_score = overrides.get("minimum_search_score", 0.0)
         minimum_reranker_score = overrides.get("minimum_reranker_score", 0.0)
         filter = self.build_filter(overrides, auth_claims)
+
         # If retrieval mode includes vectors, compute an embedding for the query
         vectors: list[VectorQuery] = []
-        if has_vector:
+        if use_vector_search:
             vectors.append(await self.compute_text_embedding(q))
-
-        # Only keep the text query if the retrieval mode uses text, otherwise drop it
-        query_text = q if has_text else None
 
         results = await self.search(
             top,
-            query_text,
+            q,
             filter,
             vectors,
+            use_text_search,
+            use_vector_search,
             use_semantic_ranker,
             use_semantic_captions,
             minimum_search_score,
@@ -122,18 +121,18 @@ info4.pdf: In-network institutions include Overlake, Swedish and others in the r
             few_shots=[{"role": "user", "content": self.question}, {"role": "assistant", "content": self.answer}],
             new_user_content=user_content,
             max_tokens=self.chatgpt_token_limit - response_token_limit,
+            fallback_to_default=self.ALLOW_NON_GPT_MODELS,
         )
 
-        chat_completion = (
-            await self.openai_client.chat.completions.create(
-                # Azure OpenAI takes the deployment name as the model name
-                model=self.chatgpt_deployment if self.chatgpt_deployment else self.chatgpt_model,
-                messages=updated_messages,
-                temperature=overrides.get("temperature", 0.3),
-                max_tokens=response_token_limit,
-                n=1,
-            )
-        ).model_dump()
+        chat_completion = await self.openai_client.chat.completions.create(
+            # Azure OpenAI takes the deployment name as the model name
+            model=self.chatgpt_deployment if self.chatgpt_deployment else self.chatgpt_model,
+            messages=updated_messages,
+            temperature=overrides.get("temperature", 0.3),
+            max_tokens=response_token_limit,
+            n=1,
+            seed=seed,
+        )
 
         data_points = {"text": sources_content}
         extra_info = {
@@ -141,13 +140,14 @@ info4.pdf: In-network institutions include Overlake, Swedish and others in the r
             "thoughts": [
                 ThoughtStep(
                     "Search using user query",
-                    query_text,
+                    q,
                     {
                         "use_semantic_captions": use_semantic_captions,
                         "use_semantic_ranker": use_semantic_ranker,
                         "top": top,
                         "filter": filter,
-                        "has_vector": has_vector,
+                        "use_vector_search": use_vector_search,
+                        "use_text_search": use_text_search,
                     },
                 ),
                 ThoughtStep(
@@ -156,7 +156,7 @@ info4.pdf: In-network institutions include Overlake, Swedish and others in the r
                 ),
                 ThoughtStep(
                     "Prompt to generate answer",
-                    [str(message) for message in updated_messages],
+                    updated_messages,
                     (
                         {"model": self.chatgpt_model, "deployment": self.chatgpt_deployment}
                         if self.chatgpt_deployment
@@ -166,8 +166,11 @@ info4.pdf: In-network institutions include Overlake, Swedish and others in the r
             ],
         }
 
-        completion = {}
-        completion["message"] = chat_completion["choices"][0]["message"]
-        completion["context"] = extra_info
-        completion["session_state"] = session_state
-        return completion
+        return {
+            "message": {
+                "content": chat_completion.choices[0].message.content,
+                "role": chat_completion.choices[0].message.role,
+            },
+            "context": extra_info,
+            "session_state": session_state,
+        }

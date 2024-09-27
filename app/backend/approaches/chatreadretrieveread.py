@@ -51,13 +51,13 @@ class ChatReadRetrieveReadApproach(ChatApproach):
         self.content_field = content_field
         self.query_language = query_language
         self.query_speller = query_speller
-        self.chatgpt_token_limit = get_token_limit(chatgpt_model)
+        self.chatgpt_token_limit = get_token_limit(chatgpt_model, default_to_minimum=self.ALLOW_NON_GPT_MODELS)
 
     @property
     def system_message_chat_conversation(self):
         return """Assistant answers questions based on Pamela's blog. You can assume all blogs are her opinion and answer accordingly. Be brief in your answers.
         Answer ONLY with the facts listed in the list of sources below. If there isn't enough information below, say you don't know. Do not generate answers that don't use the sources below. If asking a clarifying question to the user would help, ask the question.
-        For tabular information return it as an html table. Do not return markdown format. If the question is not in English, answer in the language used in the question.
+        If the question is not in English, answer in the language used in the question.
         Each source has a filename inside square brackets, followed by colon and the actual information, like Sources: [info1.txt]: This is the content of the first source.
         Always include the source filename for each fact you use in the response. Use square brackets to reference the source, for example [info1.txt]. Don't combine sources, list each source separately, for example [info1.txt][info2.pdf].
         {follow_up_questions_prompt}
@@ -89,15 +89,15 @@ class ChatReadRetrieveReadApproach(ChatApproach):
         auth_claims: dict[str, Any],
         should_stream: bool = False,
     ) -> tuple[dict[str, Any], Coroutine[Any, Any, Union[ChatCompletion, AsyncStream[ChatCompletionChunk]]]]:
-        has_text = overrides.get("retrieval_mode") in ["text", "hybrid", None]
-        has_vector = overrides.get("retrieval_mode") in ["vectors", "hybrid", None]
-        use_semantic_captions = True if overrides.get("semantic_captions") and has_text else False
+        seed = overrides.get("seed", None)
+        use_text_search = overrides.get("retrieval_mode") in ["text", "hybrid", None]
+        use_vector_search = overrides.get("retrieval_mode") in ["vectors", "hybrid", None]
+        use_semantic_ranker = True if overrides.get("semantic_ranker") else False
+        use_semantic_captions = True if overrides.get("semantic_captions") else False
         top = overrides.get("top", 3)
         minimum_search_score = overrides.get("minimum_search_score", 0.0)
         minimum_reranker_score = overrides.get("minimum_reranker_score", 0.0)
-
         filter = self.build_filter(overrides, auth_claims)
-        use_semantic_ranker = True if overrides.get("semantic_ranker") and has_text else False
 
         original_user_query = messages[-1]["content"]
         if not isinstance(original_user_query, str):
@@ -134,6 +134,7 @@ class ChatReadRetrieveReadApproach(ChatApproach):
             past_messages=messages[:-1],
             new_user_content=user_query_request,
             max_tokens=self.chatgpt_token_limit - query_response_token_limit,
+            fallback_to_default=self.ALLOW_NON_GPT_MODELS,
         )
 
         chat_completion: ChatCompletion = await self.openai_client.chat.completions.create(
@@ -144,6 +145,7 @@ class ChatReadRetrieveReadApproach(ChatApproach):
             max_tokens=query_response_token_limit,  # Setting too low risks malformed JSON, setting too high may affect performance
             n=1,
             tools=tools,
+            seed=seed,
         )
 
         query_text = self.get_search_query(chat_completion, original_user_query)
@@ -152,18 +154,16 @@ class ChatReadRetrieveReadApproach(ChatApproach):
 
         # If retrieval mode includes vectors, compute an embedding for the query
         vectors: list[VectorQuery] = []
-        if has_vector:
+        if use_vector_search:
             vectors.append(await self.compute_text_embedding(query_text))
-
-        # Only keep the text query if the retrieval mode uses text, otherwise drop it
-        if not has_text:
-            query_text = None
 
         results = await self.search(
             top,
             query_text,
             filter,
             vectors,
+            use_text_search,
+            use_vector_search,
             use_semantic_ranker,
             use_semantic_captions,
             minimum_search_score,
@@ -189,6 +189,7 @@ class ChatReadRetrieveReadApproach(ChatApproach):
             # Model does not handle lengthy system messages well. Moving sources to latest user conversation to solve follow up questions prompt.
             new_user_content=original_user_query + "\n\nSources:\n" + content,
             max_tokens=self.chatgpt_token_limit - response_token_limit,
+            fallback_to_default=self.ALLOW_NON_GPT_MODELS,
         )
 
         data_points = {"text": sources_content}
@@ -198,7 +199,7 @@ class ChatReadRetrieveReadApproach(ChatApproach):
             "thoughts": [
                 ThoughtStep(
                     "Prompt to generate search query",
-                    [str(message) for message in query_messages],
+                    query_messages,
                     (
                         {"model": self.chatgpt_model, "deployment": self.chatgpt_deployment}
                         if self.chatgpt_deployment
@@ -213,7 +214,8 @@ class ChatReadRetrieveReadApproach(ChatApproach):
                         "use_semantic_ranker": use_semantic_ranker,
                         "top": top,
                         "filter": filter,
-                        "has_vector": has_vector,
+                        "use_vector_search": use_vector_search,
+                        "use_text_search": use_text_search,
                     },
                 ),
                 ThoughtStep(
@@ -222,7 +224,7 @@ class ChatReadRetrieveReadApproach(ChatApproach):
                 ),
                 ThoughtStep(
                     "Prompt to generate answer",
-                    [str(message) for message in messages],
+                    messages,
                     (
                         {"model": self.chatgpt_model, "deployment": self.chatgpt_deployment}
                         if self.chatgpt_deployment
@@ -240,6 +242,6 @@ class ChatReadRetrieveReadApproach(ChatApproach):
             max_tokens=response_token_limit,
             n=1,
             stream=should_stream,
-            seed=1,
+            seed=seed,
         )
         return (extra_info, chat_coroutine)

@@ -73,6 +73,7 @@ jobs:
       USE_GPT4V: ${{ vars.USE_GPT4V }}
       AZURE_VISION_ENDPOINT: ${{ vars.AZURE_VISION_ENDPOINT }}
       VISION_SECRET_NAME: ${{ vars.VISION_SECRET_NAME }}
+      ENABLE_LANGUAGE_PICKER: ${{ vars.ENABLE_LANGUAGE_PICKER }}
       USE_SPEECH_INPUT_BROWSER: ${{ vars.USE_SPEECH_INPUT_BROWSER }}
       USE_SPEECH_OUTPUT_BROWSER: ${{ vars.USE_SPEECH_OUTPUT_BROWSER }}
       USE_SPEECH_OUTPUT_AZURE: ${{ vars.USE_SPEECH_OUTPUT_AZURE }}
@@ -92,6 +93,8 @@ jobs:
       AZURE_ADLS_GEN2_STORAGE_ACCOUNT: ${{ vars.AZURE_ADLS_GEN2_STORAGE_ACCOUNT }}
       AZURE_ADLS_GEN2_FILESYSTEM_PATH: ${{ vars.AZURE_ADLS_GEN2_FILESYSTEM_PATH }}
       AZURE_ADLS_GEN2_FILESYSTEM: ${{ vars.AZURE_ADLS_GEN2_FILESYSTEM }}
+      DEPLOYMENT_TARGET: ${{ vars.DEPLOYMENT_TARGET }}
+      AZURE_CONTAINER_APPS_WORKLOAD_PROFILE: ${{ vars.AZURE_CONTAINER_APPS_WORKLOAD_PROFILE }}
 
     steps:
       - name: Checkout
@@ -103,7 +106,7 @@ jobs:
       - name: Install Nodejs
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 18
 
       - name: Log in with Azure (Federated Credentials)
         if: ${{ env.AZURE_CLIENT_ID != '' }}

@@ -1,12 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import { Stack, TextField } from "@fluentui/react";
 import { Button, Tooltip } from "@fluentui/react-components";
 import { Send28Filled } from "@fluentui/react-icons";
-import { useMsal } from "@azure/msal-react";
+import { useTranslation } from "react-i18next";
 
-import { isLoggedIn, requireLogin } from "../../authConfig";
 import styles from "./QuestionInput.module.css";
 import { SpeechInput } from "./SpeechInput";
+import { LoginContext } from "../../loginContext";
+import { requireLogin } from "../../authConfig";
 
 interface Props {
     onSend: (question: string) => void;
@@ -19,6 +20,9 @@ interface Props {
 
 export const QuestionInput = ({ onSend, disabled, placeholder, clearOnSend, initQuestion, showSpeechInput }: Props) => {
     const [question, setQuestion] = useState<string>("");
+    const { loggedIn } = useContext(LoginContext);
+    const { t } = useTranslation();
+    const [isComposing, setIsComposing] = useState(false);
 
     useEffect(() => {
         initQuestion && setQuestion(initQuestion);
@@ -37,10 +41,19 @@ export const QuestionInput = ({ onSend, disabled, placeholder, clearOnSend, init
     };
 
     const onEnterPress = (ev: React.KeyboardEvent<Element>) => {
+        if (isComposing) return;
+
         if (ev.key === "Enter" && !ev.shiftKey) {
             ev.preventDefault();
             sendQuestion();
         }
+    };
+
+    const handleCompositionStart = () => {
+        setIsComposing(true);
+    };
+    const handleCompositionEnd = () => {
+        setIsComposing(false);
     };
 
     const onQuestionChange = (_ev: React.FormEvent<HTMLInputElement | HTMLTextAreaElement>, newValue?: string) => {
@@ -51,8 +64,7 @@ export const QuestionInput = ({ onSend, disabled, placeholder, clearOnSend, init
         }
     };
 
-    const { instance } = useMsal();
-    const disableRequiredAccessControl = requireLogin && !isLoggedIn(instance);
+    const disableRequiredAccessControl = requireLogin && !loggedIn;
     const sendQuestionDisabled = disabled || !question.trim() || requireLogin;
 
     if (disableRequiredAccessControl) {
@@ -71,9 +83,11 @@ export const QuestionInput = ({ onSend, disabled, placeholder, clearOnSend, init
                 value={question}
                 onChange={onQuestionChange}
                 onKeyDown={onEnterPress}
+                onCompositionStart={handleCompositionStart}
+                onCompositionEnd={handleCompositionEnd}
             />
             <div className={styles.questionInputButtonsContainer}>
-                <Tooltip content="Submit question" relationship="label">
+                <Tooltip content={t("tooltips.submitQuestion")} relationship="label">
                     <Button size="large" icon={<Send28Filled primaryFill="rgba(115, 118, 225, 1)" />} disabled={sendQuestionDisabled} onClick={sendQuestion} />
                 </Tooltip>
             </div>
