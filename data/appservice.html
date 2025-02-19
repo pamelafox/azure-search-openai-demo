@@ -1,73 +1,116 @@
-<h1 id="rag-chat-debugging-the-app-on-app-service">RAG chat: Debugging
-the app on App Service</h1>
-<p>When you run <code>azd up</code> or <code>azd deploy</code>, it
-deploys your application to App Service, and displays the deployed
-endpoint in the console.</p>
-<p>If you encounter an error with that deployed app, you can debug the
-deployment using the tips below.</p>
+<h1 id="rag-chat-debugging-the-app-on-app-service">
+  RAG chat: Debugging the app on App Service
+</h1>
+<p>
+  When you run <code>azd up</code> or <code>azd deploy</code>, it deploys your
+  application to App Service, and displays the deployed endpoint in the console.
+</p>
+<p>
+  If you encounter an error with that deployed app, you can debug the deployment
+  using the tips below.
+</p>
 <ul>
-<li><a href="#debugging-failed-azure-app-service-deployments">Debugging
-failed Azure App Service deployments</a></li>
-<li><a href="#checking-the-deployment-logs-for-errors">Checking the
-deployment logs for errors</a></li>
-<li><a href="#checking-the-app-logs-for-errors">Checking the app logs
-for errors</a></li>
-<li><a href="#checking-azure-monitor-for-errors">Checking Azure Monitor
-for errors</a></li>
-<li><a href="#configuring-log-levels">Configuring log levels</a></li>
+  <li>
+    <a href="#debugging-failed-azure-app-service-deployments"
+      >Debugging failed Azure App Service deployments</a
+    >
+  </li>
+  <li>
+    <a href="#checking-the-deployment-logs-for-errors"
+      >Checking the deployment logs for errors</a
+    >
+  </li>
+  <li>
+    <a href="#checking-the-app-logs-for-errors"
+      >Checking the app logs for errors</a
+    >
+  </li>
+  <li>
+    <a href="#checking-azure-monitor-for-errors"
+      >Checking Azure Monitor for errors</a
+    >
+  </li>
+  <li><a href="#configuring-log-levels">Configuring log levels</a></li>
 </ul>
-<h2 id="debugging-failed-azure-app-service-deployments">Debugging failed
-Azure App Service deployments</h2>
-<p>If you see a 500 error upon visiting your app after deployment,
-something went wrong during either the deployment or the server start
-script.</p>
-<p>We recommend always waiting 10 minutes, to give the server time to
-properly startup.</p>
+<h2 id="debugging-failed-azure-app-service-deployments">
+  Debugging failed Azure App Service deployments
+</h2>
+<p>
+  If you see a 500 error upon visiting your app after deployment, something went
+  wrong during either the deployment or the server start script.
+</p>
+<p>
+  We recommend always waiting 10 minutes, to give the server time to properly
+  startup.
+</p>
 <p>If you still see a 500 error after 10 minutes:</p>
 <ol type="1">
-<li><a href="#checking-the-deployment-logs-for-errors">Check the
-deployment logs</a></li>
-<li><a href="#checking-the-app-logs-for-errors">Look for errors in the
-app logs</a></li>
-<li><a href="#checking-azure-monitor-for-errors">Look for errors in
-Azure Monitor</a></li>
+  <li>
+    <a href="#checking-the-deployment-logs-for-errors"
+      >Check the deployment logs</a
+    >
+  </li>
+  <li>
+    <a href="#checking-the-app-logs-for-errors"
+      >Look for errors in the app logs</a
+    >
+  </li>
+  <li>
+    <a href="#checking-azure-monitor-for-errors"
+      >Look for errors in Azure Monitor</a
+    >
+  </li>
 </ol>
-<h2 id="checking-the-deployment-logs-for-errors">Checking the deployment
-logs for errors</h2>
+<h2 id="checking-the-deployment-logs-for-errors">
+  Checking the deployment logs for errors
+</h2>
 <p>In the Azure portal, navigate to your App Service.</p>
-<p>Select <em>Deployment Center</em> from the side navigation menu, then
-select <em>Logs</em>. You should see a timestamped list of recent
-deploys:</p>
+<p>
+  Select <em>Deployment Center</em> from the side navigation menu, then select
+  <em>Logs</em>. You should see a timestamped list of recent deploys:
+</p>
 <figure>
-<img src="images/screenshot_appservice_deploymentcenter.png"
-alt="Screenshot of deployment logs tab from Azure App Service" />
-<figcaption aria-hidden="true">Screenshot of deployment logs tab from
-Azure App Service</figcaption>
+  <img
+    src="images/screenshot_appservice_deploymentcenter.png"
+    alt="Screenshot of deployment logs tab from Azure App Service"
+  />
+  <figcaption aria-hidden="true">
+    Screenshot of deployment logs tab from Azure App Service
+  </figcaption>
 </figure>
-<p>Check whether the status of the most recent deploy is “Success
-(Active)” or “Failed”. If it’s success, the deployment logs might still
-reveal issues, and if it’s failed, the logs should certainly reveal the
-issue.</p>
-<p>Click the commit ID to open the logs for the most recent deploy.
-First scroll down to see if any errors or warnings are reported at the
-end. This is what you’ll hopefully see if all went well:</p>
+<p>
+  Check whether the status of the most recent deploy is “Success (Active)” or
+  “Failed”. If it’s success, the deployment logs might still reveal issues, and
+  if it’s failed, the logs should certainly reveal the issue.
+</p>
+<p>
+  Click the commit ID to open the logs for the most recent deploy. First scroll
+  down to see if any errors or warnings are reported at the end. This is what
+  you’ll hopefully see if all went well:
+</p>
 <figure>
-<img src="images/screenshot_appservice_deployment_log.png"
-alt="Screenshot of successful deployment logs from Azure App Service" />
-<figcaption aria-hidden="true">Screenshot of successful deployment logs
-from Azure App Service</figcaption>
+  <img
+    src="images/screenshot_appservice_deployment_log.png"
+    alt="Screenshot of successful deployment logs from Azure App Service"
+  />
+  <figcaption aria-hidden="true">
+    Screenshot of successful deployment logs from Azure App Service
+  </figcaption>
 </figure>
-<p>Now scroll back up to find the timestamp with the label “Running oryx
-build”. <a href="https://github.com/microsoft/Oryx">Oryx</a> is the open
-source tool that builds apps for App Service, Functions, and other
-platforms, across all the supported MS languages. Click the <em>Show
-logs</em> link next to that label. That will pop open detailed logs at
-the bottom. Scroll down.</p>
+<p>
+  Now scroll back up to find the timestamp with the label “Running oryx build”.
+  <a href="https://github.com/microsoft/Oryx">Oryx</a> is the open source tool
+  that builds apps for App Service, Functions, and other platforms, across all
+  the supported MS languages. Click the <em>Show logs</em> link next to that
+  label. That will pop open detailed logs at the bottom. Scroll down.
+</p>
 <details>
-<summary>
-Expand to see the logs for a successful Oryx build for the application.
-</summary>
-<pre class="plaintext"><code>Command: oryx build /tmp/zipdeploy/extracted -o /home/site/wwwroot --platform python --platform-version 3.11 -p virtualenv_name=antenv --log-file /tmp/build-debug.log  -i /tmp/8dc28dad0e10acb --compress-destination-dir | tee /tmp/oryx-build.log
+  <summary>
+    Expand to see the logs for a successful Oryx build for the application.
+  </summary>
+  <pre
+    class="plaintext"
+  ><code>Command: oryx build /tmp/zipdeploy/extracted -o /home/site/wwwroot --platform python --platform-version 3.11 -p virtualenv_name=antenv --log-file /tmp/build-debug.log  -i /tmp/8dc28dad0e10acb --compress-destination-dir | tee /tmp/oryx-build.log
 Operation performed by Microsoft Oryx, https://github.com/Microsoft/Oryx
 You can report issues at https://github.com/Microsoft/Oryx/issues
 
@@ -554,47 +597,57 @@ Done in 522 sec(s).</code></pre>
 </details>
 <p>Look for these important steps in the Oryx build:</p>
 <ul>
-<li><em>Detected following platforms: python: 3.11.7</em> That should
-match your runtime in the App Service configuration.</li>
-<li><em>Running pip install…</em> That should install all the
-requirements in your requirements.txt - if it didn’t find your
-requirements.txt, then you won’t see the packages installed.</li>
+  <li>
+    <em>Detected following platforms: python: 3.11.7</em> That should match your
+    runtime in the App Service configuration.
+  </li>
+  <li>
+    <em>Running pip install…</em> That should install all the requirements in
+    your requirements.txt - if it didn’t find your requirements.txt, then you
+    won’t see the packages installed.
+  </li>
 </ul>
-<p>If you see all those steps in the Oryx build, then that’s a good sign
-that the build went well, and you can move on to checking the App
-Service logs.</p>
-<h2 id="checking-the-app-logs-for-errors">Checking the app logs for
-errors</h2>
+<p>
+  If you see all those steps in the Oryx build, then that’s a good sign that the
+  build went well, and you can move on to checking the App Service logs.
+</p>
+<h2 id="checking-the-app-logs-for-errors">Checking the app logs for errors</h2>
 <p>Select <em>Advanced Tools</em> from the side nav:</p>
 <figure>
-<img src="images/screenshot_appservice_tools.png"
-alt="Advanced Tools" />
-<figcaption aria-hidden="true">Advanced Tools</figcaption>
+  <img src="images/screenshot_appservice_tools.png" alt="Advanced Tools" />
+  <figcaption aria-hidden="true">Advanced Tools</figcaption>
 </figure>
 <p>Select <em>Go</em> to open the Kudu website.</p>
-<p>When the Kudu website loads, find the <em>Current Docker Logs</em>
-link and select <em>Download as zip</em> next to it:</p>
+<p>
+  When the Kudu website loads, find the <em>Current Docker Logs</em> link and
+  select <em>Download as zip</em> next to it:
+</p>
 <figure>
-<img src="images/screenshot_appservice_dockerlogs.png"
-alt="Screenshot of section with Download logs links" />
-<figcaption aria-hidden="true">Screenshot of section with Download logs
-links</figcaption>
+  <img
+    src="images/screenshot_appservice_dockerlogs.png"
+    alt="Screenshot of section with Download logs links"
+  />
+  <figcaption aria-hidden="true">
+    Screenshot of section with Download logs links
+  </figcaption>
 </figure>
-<p>In the downloaded zip file, find the filename that starts with the
-most recent date and ends with “_default_docker.log”:</p>
+<p>
+  In the downloaded zip file, find the filename that starts with the most recent
+  date and ends with “_default_docker.log”:
+</p>
 <figure>
-<img src="images/screenshot_appservice_downloadedlogs.png"
-alt="Screenshot of downloaded logs" />
-<figcaption aria-hidden="true">Screenshot of downloaded
-logs</figcaption>
+  <img
+    src="images/screenshot_appservice_downloadedlogs.png"
+    alt="Screenshot of downloaded logs"
+  />
+  <figcaption aria-hidden="true">Screenshot of downloaded logs</figcaption>
 </figure>
-<p>Open that file to see the full logs, with the most recent logs at the
-bottom.</p>
+<p>
+  Open that file to see the full logs, with the most recent logs at the bottom.
+</p>
 <details>
-<summary>
-Here are the full logs for the app successfully starting:
-</summary>
-<pre class="plaintext"><code>
+  <summary>Here are the full logs for the app successfully starting:</summary>
+  <pre class="plaintext"><code>
 2024-02-08T19:30:27.900249002Z    _____
 2024-02-08T19:30:27.900282702Z   /  _  \ __________ _________   ____
 2024-02-08T19:30:27.900288002Z  /  /_\  \\___   /  |  \_  __ \_/ __ \
@@ -636,61 +689,102 @@ Here are the full logs for the app successfully starting:
 </details>
 <p>A few notable logs:</p>
 <ul>
-<li><code>2024-02-08T19:30:33.441385332Z Site's appCommandLine: python3 -m gunicorn main:app</code>
-This log indicates that App Service was correctly configured with a
-custom startup command to run the app.</li>
-<li><code>[2024-02-08 19:31:11 +0000] [75] [INFO] Starting gunicorn 20.1.0</code>
-That’s the start of the gunicorn server serving the app.</li>
-<li><code>2024-02-08T19:32:20.726942614Z [2024-02-08 19:32:20 +0000] [77] [INFO] Application startup complete.</code>
-At this point, the app has started successfully.</li>
+  <li>
+    <code
+      >2024-02-08T19:30:33.441385332Z Site's appCommandLine: python3 -m gunicorn
+      main:app</code
+    >
+    This log indicates that App Service was correctly configured with a custom
+    startup command to run the app.
+  </li>
+  <li>
+    <code
+      >[2024-02-08 19:31:11 +0000] [75] [INFO] Starting gunicorn 20.1.0</code
+    >
+    That’s the start of the gunicorn server serving the app.
+  </li>
+  <li>
+    <code
+      >2024-02-08T19:32:20.726942614Z [2024-02-08 19:32:20 +0000] [77] [INFO]
+      Application startup complete.</code
+    >
+    At this point, the app has started successfully.
+  </li>
 </ul>
-<p>If you do not see any errors in those logs, then the app should be
-running successfully. If you do see errors, then try looking in Azure
-Monitor.</p>
-<h2 id="checking-azure-monitor-for-errors">Checking Azure Monitor for
-errors</h2>
-<p>By default, deployed apps use Application Insights to trace and log
-errors. (If you explicitly opted out of Application Insights, then you
-won’t have this feature.)</p>
-<p>In the Azure Portal, navigate to the Application Insights for your
-app.</p>
-<p>To see any exceptions and server errors, navigate to the
-<em>Investigate -&gt; Failures</em> blade and browse through the
-exceptions.</p>
+<p>
+  If you do not see any errors in those logs, then the app should be running
+  successfully. If you do see errors, then try looking in Azure Monitor.
+</p>
+<h2 id="checking-azure-monitor-for-errors">
+  Checking Azure Monitor for errors
+</h2>
+<p>
+  By default, deployed apps use Application Insights to trace and log errors.
+  (If you explicitly opted out of Application Insights, then you won’t have this
+  feature.)
+</p>
+<p>In the Azure Portal, navigate to the Application Insights for your app.</p>
+<p>
+  To see any exceptions and server errors, navigate to the
+  <em>Investigate -&gt; Failures</em> blade and browse through the exceptions.
+</p>
 <figure>
-<img src="images/screenshot_appinsights_failures.png"
-alt="Screenshot of Application Insights Failures tab" />
-<figcaption aria-hidden="true">Screenshot of Application Insights
-Failures tab</figcaption>
+  <img
+    src="images/screenshot_appinsights_failures.png"
+    alt="Screenshot of Application Insights Failures tab"
+  />
+  <figcaption aria-hidden="true">
+    Screenshot of Application Insights Failures tab
+  </figcaption>
 </figure>
 <h2 id="configuring-log-levels">Configuring log levels</h2>
-<p>By default, the deployed app only logs messages from packages with a
-level of <code>WARNING</code> or higher, but logs all messages from the
-app with a level of <code>INFO</code> or higher.</p>
-<p>These lines of code in <code>app/backend/app.py</code> configure the
-logging level:</p>
-<div class="sourceCode" id="cb3"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Set root level to </span><span class="al">WARNING</span><span class="co"> to avoid seeing overly verbose logs from SDKS</span></span>
+<p>
+  By default, the deployed app only logs messages from packages with a level of
+  <code>WARNING</code> or higher, but logs all messages from the app with a
+  level of <code>INFO</code> or higher.
+</p>
+<p>
+  These lines of code in <code>app/backend/app.py</code> configure the logging
+  level:
+</p>
+<div class="sourceCode" id="cb3">
+  <pre
+    class="sourceCode python"
+  ><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Set root level to </span><span class="al">WARNING</span><span class="co"> to avoid seeing overly verbose logs from SDKS</span></span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>logging.basicConfig(level<span class="op">=</span>logging.WARNING)</span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Set the app logger level to INFO by default</span></span>
 <span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>default_level <span class="op">=</span> <span class="st">&quot;INFO&quot;</span></span>
-<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>app.logger.setLevel(os.getenv(<span class="st">&quot;APP_LOG_LEVEL&quot;</span>, default_level))</span></code></pre></div>
-<p>To change the default level, either change <code>default_level</code>
-or set the <code>APP_LOG_LEVEL</code> environment variable to one of the
-<a
-href="https://docs.python.org/3/library/logging.html#logging-levels">allowed
-log levels</a>: <code>DEBUG</code>, <code>INFO</code>,
-<code>WARNING</code>, <code>ERROR</code>, <code>CRITICAL</code>.</p>
-<p>If you need to log in a route handler, use the the global variable
-<code>current_app</code>’s logger:</p>
-<div class="sourceCode" id="cb4"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> chat():</span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    current_app.logger.info(<span class="st">&quot;Received /chat request&quot;</span>)</span></code></pre></div>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>app.logger.setLevel(os.getenv(<span class="st">&quot;APP_LOG_LEVEL&quot;</span>, default_level))</span></code></pre>
+</div>
+<p>
+  To change the default level, either change <code>default_level</code> or set
+  the <code>APP_LOG_LEVEL</code> environment variable to one of the
+  <a href="https://docs.python.org/3/library/logging.html#logging-levels"
+    >allowed log levels</a
+  >: <code>DEBUG</code>, <code>INFO</code>, <code>WARNING</code>,
+  <code>ERROR</code>, <code>CRITICAL</code>.
+</p>
+<p>
+  If you need to log in a route handler, use the the global variable
+  <code>current_app</code>’s logger:
+</p>
+<div class="sourceCode" id="cb4">
+  <pre
+    class="sourceCode python"
+  ><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> chat():</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    current_app.logger.info(<span class="st">&quot;Received /chat request&quot;</span>)</span></code></pre>
+</div>
 <p>Otherwise, use the <code>logging</code> module’s root logger:</p>
-<div class="sourceCode" id="cb5"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>logging.info(<span class="st">&quot;System message: </span><span class="sc">%s</span><span class="st">&quot;</span>, system_message)</span></code></pre></div>
-<p>If you’re having troubles finding the logs in App Service, read the
-section above on <a href="#checking-the-app-logs-for-errors">checking
-app logs</a> or watch <a
-href="https://www.youtube.com/watch?v=f0-aYuvws54">this video about
-viewing App Service logs</a>.</p>
+<div class="sourceCode" id="cb5">
+  <pre
+    class="sourceCode python"
+  ><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>logging.info(<span class="st">&quot;System message: </span><span class="sc">%s</span><span class="st">&quot;</span>, system_message)</span></code></pre>
+</div>
+<p>
+  If you’re having troubles finding the logs in App Service, read the section
+  above on <a href="#checking-the-app-logs-for-errors">checking app logs</a> or
+  watch
+  <a href="https://www.youtube.com/watch?v=f0-aYuvws54"
+    >this video about viewing App Service logs</a
+  >.
+</p>

@@ -32,9 +32,11 @@ from core.authentication import AuthenticationHelper
 class AzureAISearch:
     aisearch_query: str
 
+
 @dataclass
 class GitHubIssueSearch:
     github_query: str
+
 
 @dataclass
 class Document:
@@ -212,10 +214,11 @@ class Approach(ABC):
 
         return qualified_documents
 
-
     async def search_github_issues(self, github_issue_search: GitHubIssueSearch) -> list[Document]:
         async with aiohttp.ClientSession() as session:
-            async with session.get(f'https://api.github.com/search/issues?q={github_issue_search.github_query}+repo:Azure-samples/azure-search-openai-demo+type:issue&per_page=10') as response:
+            async with session.get(
+                f"https://api.github.com/search/issues?q={github_issue_search.github_query}+repo:Azure-samples/azure-search-openai-demo+type:issue&per_page=10"
+            ) as response:
                 if response.status == 200:
                     issues = (await response.json()).get("items", [])
                     documents = []
@@ -224,18 +227,20 @@ class Approach(ABC):
                         body = issue["body"].replace("![", "").replace("](https://", "").replace(")", "")
                         # turn html_url like https://github.com/Azure-Samples/azure-search-openai-demo/issues/2358 into issue-2358.html
                         sourcefile = f"issue-{issue.get('number')}.html"
-                        documents.append(Document(
-                            id=issue.get("id"),
-                            content=f"# {issue.get('title')}\n\n{body}",
-                            sourcepage=sourcefile,
-                            sourcefile=sourcefile,
-                            embedding=[],
-                            image_embedding=[],
-                            category=None,
-                            oids=[],
-                            groups=[],
-                            captions=[],
-                            ))
+                        documents.append(
+                            Document(
+                                id=issue.get("id"),
+                                content=f"# {issue.get('title')}\n\n{body}",
+                                sourcepage=sourcefile,
+                                sourcefile=sourcefile,
+                                embedding=[],
+                                image_embedding=[],
+                                category=None,
+                                oids=[],
+                                groups=[],
+                                captions=[],
+                            )
+                        )
                     return documents
                 else:
                     return []

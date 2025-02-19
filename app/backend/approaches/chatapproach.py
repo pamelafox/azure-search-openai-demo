@@ -16,10 +16,12 @@ class ChatApproach(Approach, ABC):
     async def run_until_final_call(self, messages, overrides, auth_claims, should_stream) -> tuple:
         pass
 
-    def get_search_query(self, chat_completion: ChatCompletion, user_query: str) -> List[Union[AzureAISearch, GitHubIssueSearch]]:
+    def get_search_query(
+        self, chat_completion: ChatCompletion, user_query: str
+    ) -> List[Union[AzureAISearch, GitHubIssueSearch]]:
         response_message = chat_completion.choices[0].message
         search_queries = []
-
+        print(response_message.tool_calls)
         if response_message.tool_calls:
             for tool in response_message.tool_calls:
                 if tool.type != "function":

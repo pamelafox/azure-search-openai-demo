@@ -142,18 +142,20 @@ class ChatReadRetrieveReadApproach(ChatApproach):
                 if use_vector_search:
                     vectors.append(await self.compute_text_embedding(query.aisearch_query))
 
-                results.extend(await self.search(
-                    top,
-                    query.aisearch_query,
-                    filter,
-                    vectors,
-                    use_text_search,
-                    use_vector_search,
-                    use_semantic_ranker,
-                    use_semantic_captions,
-                    minimum_search_score,
-                    minimum_reranker_score,
-                ))
+                results.extend(
+                    await self.search(
+                        top,
+                        query.aisearch_query,
+                        filter,
+                        vectors,
+                        use_text_search,
+                        use_vector_search,
+                        use_semantic_ranker,
+                        use_semantic_captions,
+                        minimum_search_score,
+                        minimum_reranker_score,
+                    )
+                )
 
         # STEP 3: Generate a contextual and content specific answer using the search results and chat history
         text_sources = self.get_sources_content(results, use_semantic_captions, use_image_citation=False)
