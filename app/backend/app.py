@@ -51,14 +51,18 @@ from quart_cors import cors
 from approaches.approach import Approach
 from approaches.chatreadretrieveread import ChatReadRetrieveReadApproach
 from approaches.chatreadretrievereadvision import ChatReadRetrieveReadVisionApproach
+from approaches.promptmanager import PromptyManager
 from approaches.retrievethenread import RetrieveThenReadApproach
 from approaches.retrievethenreadvision import RetrieveThenReadVisionApproach
+from chat_history.cosmosdb import chat_history_cosmosdb_bp
 from config import (
     CONFIG_ASK_APPROACH,
     CONFIG_ASK_VISION_APPROACH,
     CONFIG_AUTH_CLIENT,
     CONFIG_BLOB_CONTAINER_CLIENT,
     CONFIG_CHAT_APPROACH,
+    CONFIG_CHAT_HISTORY_BROWSER_ENABLED,
+    CONFIG_CHAT_HISTORY_COSMOS_ENABLED,
     CONFIG_CHAT_VISION_APPROACH,
     CONFIG_CREDENTIAL,
     CONFIG_GPT4V_DEPLOYED,
@@ -79,6 +83,7 @@ from config import (
     CONFIG_VECTOR_SEARCH_ENABLED,
 )
 from core.authentication import AuthenticationHelper
+from core.sessionhelper import create_session_id
 from decorators import authenticated, authenticated_path
 from error import error_dict, error_response
 from prepdocs import (
@@ -218,10 +223,18 @@ async def chat(auth_claims: Dict[str, Any]):
         else:
             approach = cast(Approach, current_app.config[CONFIG_CHAT_APPROACH])
 
+        # If session state is provided, persists the session state,
+        # else creates a new session_id depending on the chat history options enabled.
+        session_state = request_json.get("session_state")
+        if session_state is None:
+            session_state = create_session_id(
+                current_app.config[CONFIG_CHAT_HISTORY_COSMOS_ENABLED],
+                current_app.config[CONFIG_CHAT_HISTORY_BROWSER_ENABLED],
+            )
         result = await approach.run(
             request_json["messages"],
             context=context,
-            session_state=request_json.get("session_state"),
+            session_state=session_state,
         )
         return jsonify(result)
     except Exception as error:
@@ -244,10 +257,18 @@ async def chat_stream(auth_claims: Dict[str, Any]):
         else:
             approach = cast(Approach, current_app.config[CONFIG_CHAT_APPROACH])
 
+        # If session state is provided, persists the session state,
+        # else creates a new session_id depending on the chat history options enabled.
+        session_state = request_json.get("session_state")
+        if session_state is None:
+            session_state = create_session_id(
+                current_app.config[CONFIG_CHAT_HISTORY_COSMOS_ENABLED],
+                current_app.config[CONFIG_CHAT_HISTORY_BROWSER_ENABLED],
+            )
         result = await approach.run_stream(
             request_json["messages"],
             context=context,
-            session_state=request_json.get("session_state"),
+            session_state=session_state,
         )
         response = await make_response(format_as_ndjson(result))
         response.timeout = None  # type: ignore
@@ -276,6 +297,8 @@ def config():
             "showSpeechInput": current_app.config[CONFIG_SPEECH_INPUT_ENABLED],
             "showSpeechOutputBrowser": current_app.config[CONFIG_SPEECH_OUTPUT_BROWSER_ENABLED],
             "showSpeechOutputAzure": current_app.config[CONFIG_SPEECH_OUTPUT_AZURE_ENABLED],
+            "showChatHistoryBrowser": current_app.config[CONFIG_CHAT_HISTORY_BROWSER_ENABLED],
+            "showChatHistoryCosmos": current_app.config[CONFIG_CHAT_HISTORY_COSMOS_ENABLED],
         }
     )
 
@@ -397,7 +420,7 @@ async def setup_clients():
     OPENAI_HOST = os.getenv("OPENAI_HOST", "azure")
     OPENAI_CHATGPT_MODEL = os.environ["AZURE_OPENAI_CHATGPT_MODEL"]
     OPENAI_EMB_MODEL = os.getenv("AZURE_OPENAI_EMB_MODEL_NAME", "text-embedding-ada-002")
-    OPENAI_EMB_DIMENSIONS = int(os.getenv("AZURE_OPENAI_EMB_DIMENSIONS", 1536))
+    OPENAI_EMB_DIMENSIONS = int(os.getenv("AZURE_OPENAI_EMB_DIMENSIONS") or 1536)
     # Used with Azure OpenAI deployments
     AZURE_OPENAI_SERVICE = os.getenv("AZURE_OPENAI_SERVICE")
     AZURE_OPENAI_GPT4V_DEPLOYMENT = os.environ.get("AZURE_OPENAI_GPT4V_DEPLOYMENT")
@@ -407,6 +430,8 @@ async def setup_clients():
     )
     AZURE_OPENAI_EMB_DEPLOYMENT = os.getenv("AZURE_OPENAI_EMB_DEPLOYMENT") if OPENAI_HOST.startswith("azure") else None
     AZURE_OPENAI_CUSTOM_URL = os.getenv("AZURE_OPENAI_CUSTOM_URL")
+    # https://learn.microsoft.com/azure/ai-services/openai/api-version-deprecation#latest-ga-api-release
+    AZURE_OPENAI_API_VERSION = os.getenv("AZURE_OPENAI_API_VERSION") or "2024-06-01"
     AZURE_VISION_ENDPOINT = os.getenv("AZURE_VISION_ENDPOINT", "")
     # Used only with non-Azure OpenAI deployments
     OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
@@ -425,13 +450,13 @@ async def setup_clients():
     KB_FIELDS_CONTENT = os.getenv("KB_FIELDS_CONTENT", "content")
     KB_FIELDS_SOURCEPAGE = os.getenv("KB_FIELDS_SOURCEPAGE", "sourcepage")
 
-    AZURE_SEARCH_QUERY_LANGUAGE = os.getenv("AZURE_SEARCH_QUERY_LANGUAGE", "en-us")
-    AZURE_SEARCH_QUERY_SPELLER = os.getenv("AZURE_SEARCH_QUERY_SPELLER", "lexicon")
+    AZURE_SEARCH_QUERY_LANGUAGE = os.getenv("AZURE_SEARCH_QUERY_LANGUAGE") or "en-us"
+    AZURE_SEARCH_QUERY_SPELLER = os.getenv("AZURE_SEARCH_QUERY_SPELLER") or "lexicon"
     AZURE_SEARCH_SEMANTIC_RANKER = os.getenv("AZURE_SEARCH_SEMANTIC_RANKER", "free").lower()
 
     AZURE_SPEECH_SERVICE_ID = os.getenv("AZURE_SPEECH_SERVICE_ID")
     AZURE_SPEECH_SERVICE_LOCATION = os.getenv("AZURE_SPEECH_SERVICE_LOCATION")
-    AZURE_SPEECH_VOICE = os.getenv("AZURE_SPEECH_VOICE", "en-US-AndrewMultilingualNeural")
+    AZURE_SPEECH_SERVICE_VOICE = os.getenv("AZURE_SPEECH_SERVICE_VOICE") or "en-US-AndrewMultilingualNeural"
 
     USE_GPT4V = os.getenv("USE_GPT4V", "").lower() == "true"
     USE_USER_UPLOAD = os.getenv("USE_USER_UPLOAD", "").lower() == "true"
@@ -439,6 +464,8 @@ async def setup_clients():
     USE_SPEECH_INPUT_BROWSER = os.getenv("USE_SPEECH_INPUT_BROWSER", "").lower() == "true"
     USE_SPEECH_OUTPUT_BROWSER = os.getenv("USE_SPEECH_OUTPUT_BROWSER", "").lower() == "true"
     USE_SPEECH_OUTPUT_AZURE = os.getenv("USE_SPEECH_OUTPUT_AZURE", "").lower() == "true"
+    USE_CHAT_HISTORY_BROWSER = os.getenv("USE_CHAT_HISTORY_BROWSER", "").lower() == "true"
+    USE_CHAT_HISTORY_COSMOS = os.getenv("USE_CHAT_HISTORY_COSMOS", "").lower() == "true"
 
     # WEBSITE_HOSTNAME is always set by App Service, RUNNING_IN_PRODUCTION is set in main.bicep
     RUNNING_ON_AZURE = os.getenv("WEBSITE_HOSTNAME") is not None or os.getenv("RUNNING_IN_PRODUCTION") is not None
@@ -467,6 +494,9 @@ async def setup_clients():
     else:
         current_app.logger.info("Setting up Azure credential using AzureDeveloperCliCredential for home tenant")
         azure_credential = AzureDeveloperCliCredential(process_timeout=60)
+
+    # Set the Azure credential in the app config for use in other parts of the app
+    current_app.config[CONFIG_CREDENTIAL] = azure_credential
 
     # Set up clients for AI Search and Storage
     search_client = SearchClient(
@@ -533,6 +563,7 @@ async def setup_clients():
             openai_custom_url=AZURE_OPENAI_CUSTOM_URL,
             openai_deployment=AZURE_OPENAI_EMB_DEPLOYMENT,
             openai_dimensions=OPENAI_EMB_DIMENSIONS,
+            openai_api_version=AZURE_OPENAI_API_VERSION,
             openai_key=clean_key_if_exists(OPENAI_API_KEY),
             openai_org=OPENAI_ORGANIZATION,
             disable_vectors=os.getenv("USE_VECTORS", "").lower() == "false",
@@ -553,13 +584,11 @@ async def setup_clients():
             raise ValueError("Azure speech resource not configured correctly, missing AZURE_SPEECH_SERVICE_LOCATION")
         current_app.config[CONFIG_SPEECH_SERVICE_ID] = AZURE_SPEECH_SERVICE_ID
         current_app.config[CONFIG_SPEECH_SERVICE_LOCATION] = AZURE_SPEECH_SERVICE_LOCATION
-        current_app.config[CONFIG_SPEECH_SERVICE_VOICE] = AZURE_SPEECH_VOICE
+        current_app.config[CONFIG_SPEECH_SERVICE_VOICE] = AZURE_SPEECH_SERVICE_VOICE
         # Wait until token is needed to fetch for the first time
         current_app.config[CONFIG_SPEECH_SERVICE_TOKEN] = None
-        current_app.config[CONFIG_CREDENTIAL] = azure_credential
 
     if OPENAI_HOST.startswith("azure"):
-        api_version = os.getenv("AZURE_OPENAI_API_VERSION") or "2024-03-01-preview"
         if OPENAI_HOST == "azure_custom":
             current_app.logger.info("OPENAI_HOST is azure_custom, setting up Azure OpenAI custom client")
             if not AZURE_OPENAI_CUSTOM_URL:
@@ -572,12 +601,14 @@ async def setup_clients():
             endpoint = f"https://{AZURE_OPENAI_SERVICE}.openai.azure.com"
         if api_key := os.getenv("AZURE_OPENAI_API_KEY_OVERRIDE"):
             current_app.logger.info("AZURE_OPENAI_API_KEY_OVERRIDE found, using as api_key for Azure OpenAI client")
-            openai_client = AsyncAzureOpenAI(api_version=api_version, azure_endpoint=endpoint, api_key=api_key)
+            openai_client = AsyncAzureOpenAI(
+                api_version=AZURE_OPENAI_API_VERSION, azure_endpoint=endpoint, api_key=api_key
+            )
         else:
             current_app.logger.info("Using Azure credential (passwordless authentication) for Azure OpenAI client")
             token_provider = get_bearer_token_provider(azure_credential, "https://cognitiveservices.azure.com/.default")
             openai_client = AsyncAzureOpenAI(
-                api_version=api_version,
+                api_version=AZURE_OPENAI_API_VERSION,
                 azure_endpoint=endpoint,
                 azure_ad_token_provider=token_provider,
             )
@@ -609,9 +640,13 @@ async def setup_clients():
     current_app.config[CONFIG_SPEECH_INPUT_ENABLED] = USE_SPEECH_INPUT_BROWSER
     current_app.config[CONFIG_SPEECH_OUTPUT_BROWSER_ENABLED] = USE_SPEECH_OUTPUT_BROWSER
     current_app.config[CONFIG_SPEECH_OUTPUT_AZURE_ENABLED] = USE_SPEECH_OUTPUT_AZURE
+    current_app.config[CONFIG_CHAT_HISTORY_BROWSER_ENABLED] = USE_CHAT_HISTORY_BROWSER
+    current_app.config[CONFIG_CHAT_HISTORY_COSMOS_ENABLED] = USE_CHAT_HISTORY_COSMOS
 
-    # Various approaches to integrate GPT and external knowledge, most applications will use a single one of these patterns
-    # or some derivative, here we include several for exploration purposes
+    prompt_manager = PromptyManager()
+
+    # Set up the two default RAG approaches for /ask and /chat
+    # RetrieveThenReadApproach is used by /ask for single-turn Q&A
     current_app.config[CONFIG_ASK_APPROACH] = RetrieveThenReadApproach(
         search_client=search_client,
         openai_client=openai_client,
@@ -625,8 +660,10 @@ async def setup_clients():
         content_field=KB_FIELDS_CONTENT,
         query_language=AZURE_SEARCH_QUERY_LANGUAGE,
         query_speller=AZURE_SEARCH_QUERY_SPELLER,
+        prompt_manager=prompt_manager,
     )
 
+    # ChatReadRetrieveReadApproach is used by /chat for multi-turn conversation
     current_app.config[CONFIG_CHAT_APPROACH] = ChatReadRetrieveReadApproach(
         search_client=search_client,
         openai_client=openai_client,
@@ -640,6 +677,7 @@ async def setup_clients():
         content_field=KB_FIELDS_CONTENT,
         query_language=AZURE_SEARCH_QUERY_LANGUAGE,
         query_speller=AZURE_SEARCH_QUERY_SPELLER,
+        prompt_manager=prompt_manager,
     )
 
     if USE_GPT4V:
@@ -664,6 +702,7 @@ async def setup_clients():
             content_field=KB_FIELDS_CONTENT,
             query_language=AZURE_SEARCH_QUERY_LANGUAGE,
             query_speller=AZURE_SEARCH_QUERY_SPELLER,
+            prompt_manager=prompt_manager,
         )
 
         current_app.config[CONFIG_CHAT_VISION_APPROACH] = ChatReadRetrieveReadVisionApproach(
@@ -684,6 +723,7 @@ async def setup_clients():
             content_field=KB_FIELDS_CONTENT,
             query_language=AZURE_SEARCH_QUERY_LANGUAGE,
             query_speller=AZURE_SEARCH_QUERY_SPELLER,
+            prompt_manager=prompt_manager,
         )
 
 
@@ -698,6 +738,7 @@ async def close_clients():
 def create_app():
     app = Quart(__name__)
     app.register_blueprint(bp)
+    app.register_blueprint(chat_history_cosmosdb_bp)
 
     if os.getenv("APPLICATIONINSIGHTS_CONNECTION_STRING"):
         app.logger.info("APPLICATIONINSIGHTS_CONNECTION_STRING is set, enabling Azure Monitor")
@@ -720,6 +761,9 @@ def create_app():
     logging.getLogger("scripts").setLevel(app_level)
 
     if allowed_origin := os.getenv("ALLOWED_ORIGIN"):
-        app.logger.info("ALLOWED_ORIGIN is set, enabling CORS for %s", allowed_origin)
-        cors(app, allow_origin=allowed_origin, allow_methods=["GET", "POST"])
+        allowed_origins = allowed_origin.split(";")
+        if len(allowed_origins) > 0:
+            app.logger.info("CORS enabled for %s", allowed_origins)
+            cors(app, allow_origin=allowed_origins, allow_methods=["GET", "POST"])
+
     return app

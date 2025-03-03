@@ -9,22 +9,28 @@ class ChatUser(HttpUser):
 
     @task
     def ask_question(self):
-        self.client.get("/")
-        time.sleep(5)
-        self.client.post(
+        self.client.get(
+            "/",
+            name="home",
+        )
+        time.sleep(self.wait_time())
+        first_question = random.choice(
+            [
+                "What does Pamela do?",
+                "What are good sleep strategies?",
+                "What Python frameworks can be deployed on Azure?",
+                "Is it possible to mock the OpenAI SDK?",
+                "Did Pamela graduate from USC?",
+            ]
+        )
+
+        response = self.client.post(
             "/chat",
+            name="initial chat",
             json={
                 "messages": [
                     {
-                        "content": random.choice(
-                            [
-                                "What does Pamela do?",
-                                "What are good sleep strategies?",
-                                "What Python frameworks can be deployed on Azure?",
-                                "Is it possible to mock the OpenAI SDK?",
-                                "Did Pamela graduate from USC?",
-                            ]
-                        ),
+                        "content": first_question,
                         "role": "user",
                     },
                 ],
@@ -34,22 +40,27 @@ class ChatUser(HttpUser):
                         "semantic_ranker": True,
                         "semantic_captions": False,
                         "top": 3,
-                        "suggest_followup_questions": False,
+                        "suggest_followup_questions": True,
                     },
                 },
             },
         )
-        time.sleep(5)
+        time.sleep(self.wait_time())
+        # use one of the follow up questions.
+        follow_up_question = random.choice(response.json()["context"]["followup_questions"])
+        result_message = response.json()["message"]["content"]
+
         self.client.post(
             "/chat",
+            name="follow up chat",
             json={
                 "messages": [
-                    {"content": "What does Pamela do?", "role": "user"},
+                    {"content": first_question, "role": "user"},
                     {
-                        "content": "Pamela is currently a Principal Cloud Advocate at Microsoft, focusing on the ways that developers can use Python with Azure services[pamelafox.html]. In the past, she has worked as a lecturer at UC Berkeley, worked for Khan Academy, started up the engineering team at Woebot, attended a Tibetan Buddhism retreat, founded the GirlDevelopIt SF chapter, written code for Coursera, and worked in developer relations for Google [pamelafox.html]",
+                        "content": result_message,
                         "role": "assistant",
                     },
-                    {"content": "Did Pamela graduate from USC?", "role": "user"},
+                    {"content": follow_up_question, "role": "user"},
                 ],
                 "context": {
                     "overrides": {
@@ -70,7 +81,7 @@ class ChatVisionUser(HttpUser):
     @task
     def ask_question(self):
         self.client.get("/")
-        time.sleep(5)
+        time.sleep(self.wait_time())
         self.client.post(
             "/chat/stream",
             json={
@@ -100,7 +111,7 @@ class ChatVisionUser(HttpUser):
                 "session_state": None,
             },
         )
-        time.sleep(5)
+        time.sleep(self.wait_time())
         self.client.post(
             "/chat/stream",
             json={

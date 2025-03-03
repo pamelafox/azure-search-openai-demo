@@ -6,6 +6,19 @@
     "login": "Iniciar sesión",
     "logout": "Cerrar sesión",
     "clearChat": "Borrar chat",
+    "history": {
+        "chatHistory": "Historial de chat",
+        "openChatHistory": "Abrir historial de chat",
+        "noHistory": "No hay historial de chat",
+        "deleteModalTitle": "Eliminar historial de chat",
+        "deleteModalDescription": "Esta acción no se puede deshacer. ¿Eliminar este historial de chat?",
+        "deleteLabel": "Eliminar",
+        "cancelLabel": "Cancelar",
+        "today": "Hoy",
+        "yesterday": "Ayer",
+        "last7days": "Últimos 7 días",
+        "last30days": "Últimos 30 días"
+    },
     "upload": {
         "fileLabel": "Subir archivo:",
         "uploadedFilesLabel": "Archivos subidos previamente:",
@@ -48,7 +61,9 @@
         "showSupportingContent": "Mostrar contenido de soporte",
         "speakAnswer": "Hablar respuesta",
         "info": "Información",
-        "save": "Guardar"
+        "save": "Guardar",
+        "copy": "Copiar",
+        "copied": "¡Copiado!"
     },
 
     "headerTexts":{
@@ -67,7 +82,11 @@
         "seed": "Seed",
         "minimumSearchScore": "Puntaje mínimo de búsqueda",
         "minimumRerankerScore": "Puntaje mínimo de re-clasificación",
-        "retrieveCount": "Obtén éste número resultados de búsqueda:",
+        "retrieveCount": "Obtén éste número de resultados de la búsqueda:",
+        "includeCategory": "Incluir categoría",
+        "includeCategoryOptions": {
+            "all": "Todas"
+        },
         "excludeCategory": "Excluir categoría",
         "useSemanticRanker": "Usar clasificador semántico para la recuperación",
         "useSemanticCaptions": "Usar subtítulos semánticos",
@@ -115,6 +134,8 @@
             "Establece una puntuación mínima para los resultados de búsqueda que vuelven del re-clasificador semántico. La puntuación siempre varía entre 0-4. Cuanto mayor es la puntuación, más relevante es semánticamente el resultado a la pregunta.",
         "retrieveNumber":
             "Establece el número de resultados de búsqueda para recuperar de Azure AI search. Más resultados pueden aumentar la probabilidad de encontrar la respuesta correcta, pero pueden provocar que el modelo se 'pierda en el medio'.",
+        "includeCategory":
+            "Especifica una categoría para incluir en los resultados de la búsqueda. No se utilizan categorías en el conjunto de datos predeterminado.",
         "excludeCategory":
             "Especifica una categoría para excluir de los resultados de búsqueda. No se utilizan categorías en el conjunto de datos predeterminado.",
         "useSemanticReranker":

@@ -20,6 +20,9 @@
     "openAiResourceGroupName": {
       "value": "${AZURE_OPENAI_RESOURCE_GROUP}"
     },
+    "openAiLocation": {
+      "value": "${AZURE_OPENAI_LOCATION}"
+    },
     "openAiSkuName": {
       "value": "S0"
     },
@@ -34,6 +37,12 @@
     },
     "computerVisionSkuName": {
       "value": "${AZURE_COMPUTER_VISION_SKU=S1}"
+    },
+    "contentUnderstandingServiceName": {
+      "value": "${AZURE_CONTENT_UNDERSTANDING_SERVICE}"
+    },
+    "contentUnderstandingResourceGroupName": {
+      "value": "${AZURE_CONTENT_UNDERSTANDING_RESOURCE_GROUP}"
     },
     "documentIntelligenceServiceName": {
       "value": "${AZURE_DOCUMENTINTELLIGENCE_SERVICE}"
@@ -98,6 +107,9 @@
     "chatGptDeploymentVersion":{
       "value": "${AZURE_OPENAI_CHATGPT_DEPLOYMENT_VERSION}"
     },
+    "chatGptDeploymentSkuName":{
+      "value": "${AZURE_OPENAI_CHATGPT_DEPLOYMENT_SKU}"
+    },
     "chatGptDeploymentCapacity":{
       "value": "${AZURE_OPENAI_CHATGPT_DEPLOYMENT_CAPACITY}"
     },
@@ -110,14 +122,44 @@
     "embeddingDeploymentVersion":{
       "value": "${AZURE_OPENAI_EMB_DEPLOYMENT_VERSION}"
     },
+    "embeddingDeploymentSkuName":{
+      "value": "${AZURE_OPENAI_EMB_DEPLOYMENT_SKU}"
+    },
     "embeddingDeploymentCapacity":{
       "value": "${AZURE_OPENAI_EMB_DEPLOYMENT_CAPACITY}"
     },
     "embeddingDimensions": {
       "value": "${AZURE_OPENAI_EMB_DIMENSIONS}"
     },
+    "gpt4vModelName":{
+      "value": "${AZURE_OPENAI_GPT4V_MODEL}"
+    },
+    "gpt4vDeploymentName": {
+      "value": "${AZURE_OPENAI_GPT4V_DEPLOYMENT}"
+    },
+    "gpt4vDeploymentVersion":{
+      "value": "${AZURE_OPENAI_GPT4V_DEPLOYMENT_VERSION}"
+    },
+    "gpt4vDeploymentSkuName":{
+      "value": "${AZURE_OPENAI_GPT4V_DEPLOYMENT_SKU}"
+    },
     "gpt4vDeploymentCapacity":{
-      "value": "${AZURE_OPENAI_GPT4V_DEPLOYMENT_CAPACITY=10}"
+      "value": "${AZURE_OPENAI_GPT4V_DEPLOYMENT_CAPACITY}"
+    },
+    "evalModelName":{
+      "value": "${AZURE_OPENAI_EVAL_MODEL}"
+    },
+    "evalModelVersion":{
+      "value": "${AZURE_OPENAI_EVAL_MODEL_VERSION}"
+    },
+    "evalDeploymentName": {
+      "value": "${AZURE_OPENAI_EVAL_DEPLOYMENT}"
+    },
+    "evalDeploymentSkuName":{
+      "value": "${AZURE_OPENAI_EVAL_DEPLOYMENT_SKU}"
+    },
+    "evalDeploymentCapacity":{
+      "value": "${AZURE_OPENAI_EVAL_DEPLOYMENT_CAPACITY}"
     },
     "openAiHost": {
       "value": "${OPENAI_HOST=azure}"
@@ -130,6 +172,9 @@
     },
     "azureOpenAiApiKey":{
       "value": "${AZURE_OPENAI_API_KEY_OVERRIDE}"
+    },
+    "azureOpenAiDisableKeys": {
+      "value": "${AZURE_OPENAI_DISABLE_KEYS=true}"
     },
     "openAiApiKey": {
       "value": "${OPENAI_API_KEY}"
@@ -155,6 +200,9 @@
     "useGPT4V": {
       "value": "${USE_GPT4V=false}"
     },
+    "useEval": {
+      "value": "${USE_EVAL=false}"
+    },
     "enableLanguagePicker": {
       "value": "${ENABLE_LANGUAGE_PICKER=false}"
     },
@@ -178,6 +226,30 @@
     },
     "speechServiceLocation": {
       "value": "${AZURE_SPEECH_SERVICE_LOCATION}"
+    },
+    "useChatHistoryBrowser": {
+      "value": "${USE_CHAT_HISTORY_BROWSER=false}"
+    },
+    "useChatHistoryCosmos": {
+      "value": "${USE_CHAT_HISTORY_COSMOS=false}"
+    },
+    "cosmosDbSkuName": {
+      "value": "${AZURE_COSMOSDB_SKU=serverless}"
+    },
+    "cosmodDbResourceGroupName": {
+      "value": "${AZURE_COSMOSDB_RESOURCE_GROUP}"
+    },
+    "cosmosDbLocation": {
+      "value": "${AZURE_COSMOSDB_LOCATION}"
+    },
+    "cosmosDbAccountName": {
+      "value": "${AZURE_COSMOSDB_ACCOUNT}"
+    },
+    "cosmosDbThroughput": {
+      "value": "${AZURE_COSMOSDB_THROUGHPUT}"
+    },
+    "speechServiceVoice": {
+      "value": "${AZURE_SPEECH_SERVICE_VOICE}"
     },
     "useAuthentication": {
       "value": "${AZURE_USE_AUTHENTICATION=false}"
@@ -240,13 +312,19 @@
       "value": "${TF_BUILD}"
     },
     "deploymentTarget": {
-      "value": "${DEPLOYMENT_TARGET=appservice}"
+      "value": "${DEPLOYMENT_TARGET=containerapps}"
     },
     "webAppExists": {
         "value": "${SERVICE_WEB_RESOURCE_EXISTS=false}"
     },
     "azureContainerAppsWorkloadProfile": {
       "value": "${AZURE_CONTAINER_APPS_WORKLOAD_PROFILE=Consumption}"
+    },
+    "useMediaDescriberAzureCU": {
+      "value": "${USE_MEDIA_DESCRIBER_AZURE_CU=false}"
+    },
+    "useAiProject": {
+      "value": "${USE_AI_PROJECT=false}"
     }
   }
 }

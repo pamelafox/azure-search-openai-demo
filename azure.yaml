@@ -8,10 +8,11 @@ services:
     project: ./app/backend
     language: py
     # Please check docs/azure_container_apps.md for more information on how to deploy to Azure Container Apps
-    # host: containerapp
-    # docker:
-    #  remoteBuild: true
-    host: appservice
+    host: containerapp
+    docker:
+      remoteBuild: true
+    # Please check docs/azure_app_service.md for more information on how to deploy to Azure App Service
+    # host: appservice
     hooks:
       # This hook is called when App Service is the host
       prepackage:
@@ -42,6 +43,7 @@ pipeline:
       - AZURE_OPENAI_SERVICE
       - AZURE_OPENAI_API_VERSION
       - AZURE_OPENAI_RESOURCE_GROUP
+      - AZURE_OPENAI_LOCATION
       - AZURE_DOCUMENTINTELLIGENCE_SERVICE
       - AZURE_DOCUMENTINTELLIGENCE_RESOURCE_GROUP
       - AZURE_DOCUMENTINTELLIGENCE_SKU
@@ -64,11 +66,25 @@ pipeline:
       - AZURE_OPENAI_CHATGPT_DEPLOYMENT
       - AZURE_OPENAI_CHATGPT_DEPLOYMENT_CAPACITY
       - AZURE_OPENAI_CHATGPT_DEPLOYMENT_VERSION
+      - AZURE_OPENAI_CHATGPT_DEPLOYMENT_SKU
       - AZURE_OPENAI_EMB_MODEL_NAME
       - AZURE_OPENAI_EMB_DEPLOYMENT
       - AZURE_OPENAI_EMB_DEPLOYMENT_CAPACITY
       - AZURE_OPENAI_EMB_DEPLOYMENT_VERSION
+      - AZURE_OPENAI_EMB_DEPLOYMENT_SKU
       - AZURE_OPENAI_EMB_DIMENSIONS
+      - USE_EVAL
+      - AZURE_OPENAI_EVAL_MODEL
+      - AZURE_OPENAI_EVAL_MODEL_VERSION
+      - AZURE_OPENAI_EVAL_DEPLOYMENT
+      - AZURE_OPENAI_EVAL_DEPLOYMENT_SKU
+      - AZURE_OPENAI_EVAL_DEPLOYMENT_CAPACITY
+      - AZURE_OPENAI_GPT4V_MODEL
+      - AZURE_OPENAI_GPT4V_DEPLOYMENT
+      - AZURE_OPENAI_GPT4V_DEPLOYMENT_CAPACITY
+      - AZURE_OPENAI_GPT4V_DEPLOYMENT_VERSION
+      - AZURE_OPENAI_GPT4V_DEPLOYMENT_SKU
+      - AZURE_OPENAI_DISABLE_KEYS
       - OPENAI_HOST
       - OPENAI_API_KEY
       - OPENAI_ORGANIZATION
@@ -92,6 +108,7 @@ pipeline:
       - AZURE_SPEECH_SERVICE_RESOURCE_GROUP
       - AZURE_SPEECH_SERVICE_LOCATION
       - AZURE_SPEECH_SERVICE_SKU
+      - AZURE_SPEECH_SERVICE_VOICE
       - AZURE_KEY_VAULT_NAME
       - AZURE_USE_AUTHENTICATION
       - AZURE_ENFORCE_ACCESS_CONTROL
@@ -105,6 +122,9 @@ pipeline:
       - AZURE_ADLS_GEN2_FILESYSTEM
       - DEPLOYMENT_TARGET
       - AZURE_CONTAINER_APPS_WORKLOAD_PROFILE
+      - USE_CHAT_HISTORY_BROWSER
+      - USE_MEDIA_DESCRIBER_AZURE_CU
+      - USE_AI_PROJECT
   secrets:
       - AZURE_SERVER_APP_SECRET
       - AZURE_CLIENT_APP_SECRET
