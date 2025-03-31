@@ -302,7 +302,8 @@ class SearchManager:
                 if url:
                     for document in documents:
                         document["storageUrl"] = url
-                if self.embeddings:
+                if self.embeddings and False:
+                    logger.info("Creating embeddings for %d sections", len(documents))
                     embeddings = await self.embeddings.create_embeddings(
                         texts=[section.split_page.text for section in batch]
                     )

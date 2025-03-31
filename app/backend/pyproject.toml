@@ -1,0 +1,23 @@
+[project]
+name = "rag-chat-mcp-server"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "mcp[cli]>=1.5.0",
+    "azure-identity",
+    "azure-search-documents",
+    "azure-ai-documentintelligence==1.0.0b4",
+    "azure-storage-blob",
+    "pymupdf",
+    "pillow",
+    "pypdf",
+    "azure-search-documents==11.6.0b9",
+    "aiohttp",
+    "tiktoken",
+    "openai",
+    "tenacity",
+    "bs4"
+
+]
