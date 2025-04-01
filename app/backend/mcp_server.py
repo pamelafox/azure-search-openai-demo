@@ -41,13 +41,14 @@ class DocumentationTopic(str, Enum):
 
 search_indices = {
     DocumentationTopic.MODELCONTEXTPROTOCOL: "gptkbindex",
-    DocumentationTopic.FLASK: "gptkbindex-flask",
-    DocumentationTopic.ESLINT: "gptkbindex-eslint",
+    DocumentationTopic.FLASK: "gptkb-flask",
+    DocumentationTopic.ESLINT: "gptkb-eslint",
 }
 
 
+# Unfortunately, Claude Desktop errors if we use an enum as the argument, so we have to use str for search_topic here
 @mcp.tool()
-async def search_my_documentation(search_query: str, search_topic: DocumentationTopic) -> str:
+async def search_my_documentation(search_query: str, search_topic: str) -> str:
     """Search the Azure Search index for documentation about the given search_query.
 
     Args:
@@ -82,8 +83,9 @@ async def search_my_documentation(search_query: str, search_topic: Documentation
         return f"Error: {e}"
 
 
+# Unfortunately, Claude Desktop errors if we use an enum as the argument, so we have to use str for search_topic here
 @mcp.tool()
-async def upload_to_my_documentation(filepath: str, search_topic: DocumentationTopic) -> str:
+async def upload_to_my_documentation(filepath: str, search_topic: str) -> str:
     """
     Upload a file to the main storage account and ingest it into an Azure AI Search index.
 
@@ -134,8 +136,6 @@ async def upload_to_my_documentation(filepath: str, search_topic: DocumentationT
             local_html_parser=os.getenv("USE_LOCAL_HTML_PARSER", "").lower() == "true",
             search_images=USE_GPT4V,
         )
-
-        search_topic = DocumentationTopic.MODELCONTEXTPROTOCOL
         search_index = search_indices.get(search_topic)
         if not search_index:
             return "Error: Could not find appropriate search index for the given topic."

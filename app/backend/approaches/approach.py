@@ -47,6 +47,7 @@ class Document:
         result_dict = {
             "id": self.id,
             "content": self.content,
+            "embedding": Document.trim_embedding(self.embedding),
             "imageEmbedding": Document.trim_embedding(self.image_embedding),
             "category": self.category,
             "sourcepage": self.sourcepage,
@@ -68,7 +69,6 @@ class Document:
             "score": self.score,
             "reranker_score": self.reranker_score,
         }
-        result_dict[self.embedding_field] = Document.trim_embedding(self.embedding)
         return result_dict
 
     @classmethod
