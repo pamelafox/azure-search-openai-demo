@@ -10,6 +10,7 @@ dependencies = [
     "azure-search-documents",
     "azure-ai-documentintelligence==1.0.0b4",
     "azure-storage-blob",
+    "azure-storage-file-datalake",
     "pymupdf",
     "pillow",
     "pypdf",

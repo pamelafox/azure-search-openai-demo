@@ -187,6 +187,21 @@ wheels = [
 ]
 
 [[package]]
+name = "azure-storage-file-datalake"
+version = "12.20.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "azure-core" },
+    { name = "azure-storage-blob" },
+    { name = "isodate" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/4d/4b/66e68e1cb5655d3f290541151dc97c82ae565e4146b66f72f3465ba6e617/azure_storage_file_datalake-12.20.0.tar.gz", hash = "sha256:8d6932b75470de935998755d980a3296412d8ff2a11631c1d99267ae65f11f03", size = 283945 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/5e/de/771c2c75129599bd1a693ed29fc4b9961e79b88a641beb6e8ea714198184/azure_storage_file_datalake-12.20.0-py3-none-any.whl", hash = "sha256:d32af627ccf7f8523ac4520a4004291b8ca340d7c607545366e1b08822afa01b", size = 263978 },
+]
+
+[[package]]
 name = "beautifulsoup4"
 version = "4.13.3"
 source = { registry = "https://pypi.org/simple" }
@@ -876,6 +891,7 @@ dependencies = [
     { name = "azure-identity" },
     { name = "azure-search-documents" },
     { name = "azure-storage-blob" },
+    { name = "azure-storage-file-datalake" },
     { name = "bs4" },
     { name = "mcp", extra = ["cli"] },
     { name = "openai" },
@@ -894,6 +910,7 @@ requires-dist = [
     { name = "azure-search-documents" },
     { name = "azure-search-documents", specifier = "==11.6.0b9" },
     { name = "azure-storage-blob" },
+    { name = "azure-storage-file-datalake" },
     { name = "bs4" },
     { name = "mcp", extras = ["cli"], specifier = ">=1.5.0" },
     { name = "openai" },
