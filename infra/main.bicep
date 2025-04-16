@@ -874,7 +874,7 @@ module ai 'core/ai/ai-environment.bicep' = if (useAiProject) {
   scope: resourceGroup
   params: {
     // Limited region support: https://learn.microsoft.com/azure/ai-foundry/how-to/develop/evaluate-sdk#region-support
-    location: 'eastus2'
+    location: 'swedencentral'
     tags: tags
     hubName: 'aihub-${resourceToken}'
     projectName: 'aiproj-${resourceToken}'
