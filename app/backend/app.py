@@ -5,10 +5,10 @@ import logging
 import mimetypes
 import os
 import time
+import traceback
 from collections.abc import AsyncGenerator
 from pathlib import Path
 from typing import Any, Union, cast
-import traceback
 
 from azure.cognitiveservices.speech import (
     ResultReason,
@@ -73,8 +73,8 @@ from config import (
     CONFIG_LANGUAGE_PICKER_ENABLED,
     CONFIG_OPENAI_CLIENT,
     CONFIG_QUERY_REWRITING_ENABLED,
-    CONFIG_REFLECTION_ENABLED,
     CONFIG_REASONING_EFFORT_ENABLED,
+    CONFIG_REFLECTION_ENABLED,
     CONFIG_SEARCH_CLIENT,
     CONFIG_SEMANTIC_RANKER_DEPLOYED,
     CONFIG_SPEECH_INPUT_ENABLED,
@@ -245,8 +245,7 @@ async def chat(auth_claims: dict[str, Any]):
             context=context,
             session_state=session_state,
         )
-        results = [r async for r in result]
-        return jsonify({"value": results})
+        return jsonify(result)
     except Exception as error:
         return error_response(error, "/chat")
 
