@@ -1,6 +1,6 @@
 {
     "testdata_path": "ground_truth.jsonl",
-    "results_dir": "results/agentic-descending-top3",
+    "results_dir": "results/agentic-gpt4omini-top3",
     "requested_metrics": ["gpt_groundedness", "gpt_relevance", "answer_length", "latency", "citations_matched", "any_citation"],
     "target_url": "https://capps-backend-32usxgruzbmli.yellowplant-b209c4cc.eastus2.azurecontainerapps.io/chat",
     "target_parameters": {
@@ -23,7 +23,6 @@
             "gpt4v_input": "textAndImages",
             "language": "en",
             "use_agentic_retrieval": true,
-            "results_merge_strategy": "descending",
             "seed": 1
         }
     },

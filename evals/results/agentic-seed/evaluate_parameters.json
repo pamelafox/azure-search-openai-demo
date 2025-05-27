@@ -1,11 +1,11 @@
 {
-    "testdata_path": "ground_truth.jsonl",
-    "results_dir": "results/agentic-descending-top3",
-    "requested_metrics": ["gpt_groundedness", "gpt_relevance", "answer_length", "latency", "citations_matched", "any_citation"],
+    "evaluation_gpt_model": "gpt-4o",
+    "evaluation_timestamp": 1747787287,
+    "testdata_path": "/Users/pamelafox/azure-search-openai-demo/evals/ground_truth.jsonl",
     "target_url": "https://capps-backend-32usxgruzbmli.yellowplant-b209c4cc.eastus2.azurecontainerapps.io/chat",
     "target_parameters": {
         "overrides": {
-            "top": 3,
+            "top": 10,
             "max_subqueries": 10,
             "temperature": 0.3,
             "minimum_reranker_score": 0,
@@ -23,10 +23,8 @@
             "gpt4v_input": "textAndImages",
             "language": "en",
             "use_agentic_retrieval": true,
-            "results_merge_strategy": "descending",
             "seed": 1
         }
     },
-    "target_response_answer_jmespath": "message.content",
-    "target_response_context_jmespath": "context.data_points.text"
+    "num_questions": null
 }
