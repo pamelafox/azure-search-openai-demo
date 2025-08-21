@@ -21,6 +21,8 @@
 
 @media (min-width: 992px) {
     .questionInputContainer {
-        height: 5.625rem;
+        /* Allow the container to grow with multiline input instead of forcing fixed height */
+        min-height: 5.625rem;
+        height: auto;
     }
 }

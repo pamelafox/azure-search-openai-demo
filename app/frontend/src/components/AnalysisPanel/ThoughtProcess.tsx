@@ -22,7 +22,7 @@ export const ThoughtProcess = ({ thoughts }: Props) => {
                 return (
                     <li className={styles.tListItem} key={ind}>
                         <div className={styles.tStep}>{t.title}</div>
-                        <Stack horizontal tokens={{ childrenGap: 5 }}>
+                        <Stack horizontal tokens={{ childrenGap: 5 }} className={styles.tPropRow}>
                             {t.props &&
                                 (Object.keys(t.props).filter(k => k !== "token_usage" && k !== "query_plan") || []).map((k: any) => (
                                     <span className={styles.tProp} key={k}>
@@ -33,7 +33,7 @@ export const ThoughtProcess = ({ thoughts }: Props) => {
                         {t.props?.token_usage && <TokenUsageGraph tokenUsage={t.props.token_usage} reasoningEffort={t.props.reasoning_effort} />}
                         {t.props?.query_plan && <AgentPlan query_plan={t.props.query_plan} description={t.description} />}
                         {Array.isArray(t.description) ? (
-                            <SyntaxHighlighter language="json" wrapLongLines className={styles.tCodeBlock} style={a11yLight}>
+                            <SyntaxHighlighter language="json" wrapLines wrapLongLines className={styles.tCodeBlock} style={a11yLight}>
                                 {JSON.stringify(t.description, null, 2)}
                             </SyntaxHighlighter>
                         ) : (
