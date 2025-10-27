@@ -16,18 +16,6 @@ services:
     # Please check docs/azure_app_service.md for more information on how to deploy to Azure App Service
     # host: appservice
     hooks:
-      # This hook is called when App Service is the host
-      prepackage:
-        windows:
-          shell: pwsh
-          run:  cd ../frontend;npm install;npm run build
-          interactive: false
-          continueOnError: false
-        posix:
-          shell: sh
-          run:  cd ../frontend;npm install;npm run build
-          interactive: false
-          continueOnError: false
       # This hook is called when Azure Container Apps is the host
       prebuild:
         windows:
@@ -40,6 +28,18 @@ services:
           run:  cd ../frontend;npm install;npm run build
           interactive: false
           continueOnError: false
+      # This hook is called when App Service is the host - uncomment if using App Service
+      # prepackage:
+      #   windows:
+      #     shell: pwsh
+      #     run:  cd ../frontend;npm install;npm run build
+      #     interactive: false
+      #     continueOnError: false
+      #   posix:
+      #     shell: sh
+      #     run:  cd ../frontend;npm install;npm run build
+      #     interactive: false
+      #     continueOnError: false
 hooks:
     preprovision:
       windows:

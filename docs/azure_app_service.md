@@ -7,13 +7,15 @@ To deploy to Azure App Service, please follow the following steps:
 
 1. Comment out `host: containerapp` and uncomment `host: appservice` in the [azure.yaml](../azure.yaml) file.
 
-2. Login to your Azure account:
+2. Comment out the `prebuild` hook and uncomment the `prepackage` hook in the [azure.yaml](../azure.yaml) file, as App Service requires a different build process.
+
+3. Login to your Azure account:
 
     ```bash
     azd auth login
     ```
 
-3. Create a new `azd` environment to store the deployment parameters:
+4. Create a new `azd` environment to store the deployment parameters:
 
     ```bash
     azd env new
@@ -22,14 +24,14 @@ To deploy to Azure App Service, please follow the following steps:
     Enter a name that will be used for the resource group.
     This will create a new folder in the `.azure` folder, and set it as the active environment for any calls to `azd` going forward.
 
-4. Set the deployment target to `appservice`:
+5. Set the deployment target to `appservice`:
 
     ```bash
     azd env set DEPLOYMENT_TARGET appservice
     ```
 
-5. (Optional) This is the point where you can customize the deployment by setting other `azd` environment variables, in order to [use existing resources](deploy_existing.md), [enable optional features (such as auth or vision)](deploy_features.md), or [deploy to free tiers](deploy_lowcost.md).
-6. Provision the resources and deploy the code:
+6. (Optional) This is the point where you can customize the deployment by setting other `azd` environment variables, in order to [use existing resources](deploy_existing.md), [enable optional features (such as auth or vision)](deploy_features.md), or [deploy to free tiers](deploy_lowcost.md).
+7. Provision the resources and deploy the code:
 
     ```bash
     azd up
