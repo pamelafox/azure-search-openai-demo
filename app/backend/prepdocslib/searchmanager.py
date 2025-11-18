@@ -496,7 +496,7 @@ class SearchManager:
             async with self.search_info.create_search_index_client() as search_index_client:
                 search_index_knowledge_source = SearchIndexKnowledgeSource(
                     name=self.search_info.index_name,  # Use the same name for convenience
-                    description="Default knowledge source using the main search index",
+                    description="Zava outdoor product manuals and descriptions",
                     search_index_parameters=SearchIndexKnowledgeSourceParameters(
                         search_index_name=self.search_info.index_name,
                         source_data_fields=source_data_fields,
@@ -514,7 +514,7 @@ class SearchManager:
                     logger.info("Adding web knowledge source to the knowledge base")
                     web_knowledge_source = WebKnowledgeSource(
                         name="web",
-                        description="Default web knowledge source",
+                        description="Public web search for questions that are not about Zava, such as general DIY advice and other brands.",
                     )
                     await search_index_client.create_or_update_knowledge_source(knowledge_source=web_knowledge_source)
                     knowledge_source_refs["web"] = KnowledgeSourceReference(name=web_knowledge_source.name)
@@ -523,7 +523,7 @@ class SearchManager:
                     logger.info("Adding SharePoint knowledge source to the knowledge base")
                     sharepoint_knowledge_source = RemoteSharePointKnowledgeSource(
                         name="sharepoint",
-                        description="SharePoint knowledge source",
+                        description="SharePoint documents about Zava - blog posts and internal corporate strategy documents.",
                         remote_share_point_parameters=RemoteSharePointKnowledgeSourceParameters(),
                     )
                     await search_index_client.create_or_update_knowledge_source(
