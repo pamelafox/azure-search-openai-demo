@@ -496,7 +496,7 @@ class SearchManager:
             async with self.search_info.create_search_index_client() as search_index_client:
                 search_index_knowledge_source = SearchIndexKnowledgeSource(
                     name=self.search_info.index_name,  # Use the same name for convenience
-                    description="Zava outdoor product manuals and descriptions",
+                    description="Zava outdoor product manuals and descriptions with prices, categories, and images.",
                     search_index_parameters=SearchIndexKnowledgeSourceParameters(
                         search_index_name=self.search_info.index_name,
                         source_data_fields=source_data_fields,
