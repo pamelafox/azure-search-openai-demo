@@ -88,7 +88,7 @@ class OpenAIEmbeddings(ABC):
             text_token_length = self.calculate_token_length(text)
 
             # If a single text exceeds the token limit, split it into smaller chunks
-            if text_token_length >= batch_token_limit:
+            if text_token_length > batch_token_limit:
                 logger.warning(
                     "Text with %d tokens exceeds batch token limit of %d, splitting into smaller chunks",
                     text_token_length,
