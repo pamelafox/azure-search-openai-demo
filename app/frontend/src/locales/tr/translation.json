@@ -94,12 +94,12 @@
         "useQueryRewriting": "Bilgi erişimi için sorgu yeniden yazımını kullanın",
         "reasoningEffort": "Akıl yürütme çabası",
         "reasoningEffortOptions": {
-            "none": "None",
+            "none": "Yok",
             "minimal": "En az",
             "low": "Düşük",
             "medium": "Orta",
             "high": "Yüksek",
-            "xhigh": "Extra High"
+            "xhigh": "Çok yüksek"
         },
         "useSuggestFollowupQuestions": "Takip soruları öner",
         "useAgenticKnowledgeBase": "Ajan temelli getirim kullan",

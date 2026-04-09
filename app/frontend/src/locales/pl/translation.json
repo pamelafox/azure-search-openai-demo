@@ -95,12 +95,12 @@
         "useQueryRewriting": "Użyj przepisywania zapytań do pobierania",
         "reasoningEffort": "Poziom rozumowania",
         "reasoningEffortOptions": {
-            "none": "None",
+            "none": "Brak",
             "minimal": "Minimal",
             "low": "Niski",
             "medium": "Średni",
             "high": "Wysoki",
-            "xhigh": "Extra High"
+            "xhigh": "Bardzo wysoki"
         },
         "useSuggestFollowupQuestions": "Sugeruj pytania uzupełniające",
         "useAgenticKnowledgeBase": "Użyj agentowego pobierania",

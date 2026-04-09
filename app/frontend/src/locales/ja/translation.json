@@ -94,12 +94,12 @@
         "useQueryRewriting": "検索のためにクエリの書き換えを使用する",
         "reasoningEffort": "推論の労力",
         "reasoningEffortOptions": {
-            "none": "None",
+            "none": "なし",
             "minimal": "最小（GPT-5 のみ）",
             "low": "低",
             "medium": "中",
             "high": "高",
-            "xhigh": "Extra High"
+            "xhigh": "最高"
         },
         "useSuggestFollowupQuestions": "フォローアップの質問を提案",
         "useAgenticKnowledgeBase": "エージェント型リトリーバルを使用",

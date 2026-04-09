@@ -961,13 +961,11 @@ class Approach(ABC):
         }
 
         if self.is_reasoning_model(chatgpt_model):
-            # Only reasoning models accept the reasoning parameter
             effort = reasoning_effort or overrides.get("reasoning_effort") or self.reasoning_effort
             if effort:
                 params["reasoning"] = {"effort": effort}
         else:
-            # Temperature is not supported by reasoning models
-            params["temperature"] = temperature or overrides.get("temperature", 0.3)
+            params["temperature"] = temperature if temperature is not None else overrides.get("temperature", 0.3)
 
         if should_stream:
             params["stream"] = True

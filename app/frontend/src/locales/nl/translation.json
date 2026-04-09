@@ -94,12 +94,12 @@
         "useQueryRewriting": "Gebruik de herformulering van zoekopdrachten om informatie op te halen",
         "reasoningEffort": "Redeneerinspanning",
         "reasoningEffortOptions": {
-            "none": "None",
+            "none": "Geen",
             "minimal": "Minimaal",
             "low": "Laag",
             "medium": "Gemiddeld",
             "high": "Hoog",
-            "xhigh": "Extra High"
+            "xhigh": "Extra hoog"
         },
         "useSuggestFollowupQuestions": "Vervolgvragen voorstellen",
         "useAgenticKnowledgeBase": "Gebruik agentische retrieval",

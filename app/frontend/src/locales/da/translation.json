@@ -94,12 +94,12 @@
         "useQueryRewriting": "Brug forespørgselsomskrivning til informationsgenfinding",
         "reasoningEffort": "Ræsonnementsindsats",
         "reasoningEffortOptions": {
-            "none": "None",
+            "none": "Ingen",
             "minimal": "Minimal",
             "low": "Lav",
             "medium": "Medium",
             "high": "Høj",
-            "xhigh": "Extra High"
+            "xhigh": "Ekstra høj"
         },
         "useSuggestFollowupQuestions": "Foreslå opfølgende spørgsmål",
         "useAgenticKnowledgeBase": "Brug agentisk hentning",

@@ -98,12 +98,12 @@
         "useQueryRewriting": "Utilisez la réécriture des requêtes pour la récupération",
         "reasoningEffort": "Effort de raisonnement",
         "reasoningEffortOptions": {
-            "none": "None",
+            "none": "Aucun",
             "minimal": "Minimal",
             "low": "Faible",
             "medium": "Moyen",
             "high": "Élevé",
-            "xhigh": "Extra High"
+            "xhigh": "Très élevé"
         },
         "llmInputs": "Entrées pour LLM",
         "llmInputsOptions": {

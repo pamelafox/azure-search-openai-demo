@@ -94,12 +94,12 @@
         "useQueryRewriting": "Utiliza la reescritura de consultas para la recuperación",
         "reasoningEffort": "Esfuerzo de razonamiento",
         "reasoningEffortOptions": {
-            "none": "None",
+            "none": "Ninguno",
             "minimal": "Mínimo",
             "low": "Bajo",
             "medium": "Medio",
             "high": "Alto",
-            "xhigh": "Extra High"
+            "xhigh": "Extra alto"
         },
         "useSuggestFollowupQuestions": "Sugerir preguntas de seguimiento",
         "useAgenticKnowledgeBase": "Usar la recuperación agéntica",

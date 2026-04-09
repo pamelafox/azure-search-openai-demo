@@ -485,7 +485,7 @@ export const Settings = ({
                             <Dropdown
                                 id={reasoningEffortFieldId}
                                 selectedOptions={[reasoningEffort]}
-                                value={t(`labels.reasoningEffortOptions.${reasoningEffort}`) || reasoningEffort}
+                                value={t(`labels.reasoningEffortOptions.${reasoningEffort}`, { defaultValue: reasoningEffort })}
                                 onOptionSelect={(_ev: SelectionEvents, data: OptionOnSelectData) => onChange("reasoningEffort", data.optionValue || "")}
                                 aria-labelledby={reasoningEffortId}
                             >
