@@ -23,7 +23,13 @@ from azure.search.documents.knowledgebases.aio import KnowledgeBaseRetrievalClie
 from azure.storage.blob.aio import BlobServiceClient, ContainerClient
 from openai.types import CreateEmbeddingResponse, Embedding
 from openai.types.create_embedding_response import Usage
-from openai.types.responses import Response, ResponseOutputMessage, ResponseUsage
+from openai.types.responses import (
+    Response,
+    ResponseCompletedEvent,
+    ResponseOutputMessage,
+    ResponseTextDeltaEvent,
+    ResponseUsage,
+)
 from openai.types.responses.response_usage import (
     InputTokensDetails,
     OutputTokensDetails,
@@ -137,11 +143,20 @@ def mock_openai_embedding(monkeypatch):
 
 @pytest.fixture
 def mock_openai_chatcompletion(monkeypatch):
-    class MockResponseEvent:
-        def __init__(self, event_type: str, delta: str | None = None, response: Response | None = None):
-            self.type = event_type
-            self.delta = delta
-            self.response = response
+    seq = 0
+
+    def make_text_delta(delta: str) -> ResponseTextDeltaEvent:
+        nonlocal seq
+        seq += 1
+        return ResponseTextDeltaEvent(
+            content_index=0,
+            delta=delta,
+            item_id="item-0",
+            logprobs=[],
+            output_index=0,
+            sequence_number=seq,
+            type="response.output_text.delta",
+        )
 
     def make_response_usage(usage: dict[str, Any]) -> ResponseUsage:
         details = usage.get("completion_tokens_details", {})
@@ -156,14 +171,14 @@ def mock_openai_chatcompletion(monkeypatch):
     class AsyncResponseIterator:
         def __init__(self, answer: str, reasoning: bool, usage: dict[str, Any]):
             model = "gpt-4.1-mini" if not reasoning else "gpt-5"
-            self.events: list[MockResponseEvent] = []
+            self.events: list[ResponseTextDeltaEvent | ResponseCompletedEvent] = []
             # Split at << to simulate chunked responses
             if answer.find("<<") > -1:
                 parts = answer.split("<<")
-                self.events.append(MockResponseEvent("response.output_text.delta", delta=parts[0] + "<<"))
-                self.events.append(MockResponseEvent("response.output_text.delta", delta=parts[1]))
+                self.events.append(make_text_delta(parts[0] + "<<"))
+                self.events.append(make_text_delta(parts[1]))
             else:
-                self.events.append(MockResponseEvent("response.output_text.delta", delta=answer))
+                self.events.append(make_text_delta(answer))
 
             completed_response = Response(
                 id="test-id",
@@ -185,7 +200,11 @@ def mock_openai_chatcompletion(monkeypatch):
                 status="completed",
                 usage=make_response_usage(usage),
             )
-            self.events.append(MockResponseEvent("response.completed", response=completed_response))
+            nonlocal seq
+            seq += 1
+            self.events.append(
+                ResponseCompletedEvent(response=completed_response, sequence_number=seq, type="response.completed")
+            )
 
         def __aiter__(self):
             return self
