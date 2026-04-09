@@ -10,10 +10,8 @@ from openai import AsyncOpenAI, AsyncStream
 from openai.types.responses import (
     EasyInputMessageParam,
     Response,
-    ResponseCompletedEvent,
     ResponseOutputMessage,
     ResponseStreamEvent,
-    ResponseTextDeltaEvent,
 )
 
 from approaches.approach import (
@@ -189,8 +187,8 @@ class ChatReadRetrieveReadApproach(Approach):
         stream = cast(AsyncStream[ResponseStreamEvent], result)
 
         async for event in stream:
-            if isinstance(event, ResponseTextDeltaEvent):
-                delta_content: str = event.delta or ""
+            if event.type == "response.output_text.delta":
+                delta_content: str = event.delta or ""  # type: ignore[union-attr]
                 completion = {
                     "delta": {
                         "content": delta_content,
@@ -208,9 +206,9 @@ class ChatReadRetrieveReadApproach(Approach):
                     followup_content += delta_content
                 else:
                     yield completion
-            elif isinstance(event, ResponseCompletedEvent):
-                if event.response.usage and extra_info.thoughts and self.include_token_usage:
-                    extra_info.thoughts[-1].update_token_usage(event.response.usage)
+            elif event.type == "response.completed":
+                if event.response.usage and extra_info.thoughts and self.include_token_usage:  # type: ignore[union-attr]
+                    extra_info.thoughts[-1].update_token_usage(event.response.usage)  # type: ignore[union-attr]
                     yield {"delta": {"role": "assistant"}, "context": extra_info, "session_state": session_state}
 
         if followup_content:
