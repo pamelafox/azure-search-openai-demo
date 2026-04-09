@@ -140,7 +140,7 @@ class MultimodalModelDescriber(MediaDescriber):
                     model=self.model if self.deployment is None else self.deployment,
                     max_output_tokens=500,
                     store=False,
-                    input=[
+                    input=[  # type: ignore[arg-type]
                         {
                             "role": "system",
                             "content": "You are a helpful assistant that describes images from organizational documents.",

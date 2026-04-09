@@ -226,10 +226,6 @@ class TokenUsageProps:
         )
 
 
-# GPT reasoning models use different parameters than other models
-# https://learn.microsoft.com/azure/ai-services/openai/how-to/reasoning
-
-
 class Approach(ABC):
     RESPONSE_DEFAULT_TOKEN_LIMIT = 1024
     RESPONSE_REASONING_DEFAULT_TOKEN_LIMIT = 8192
@@ -980,7 +976,7 @@ class Approach(ABC):
             params["tools"] = tools
 
         # Azure OpenAI takes the deployment name as the model name
-        return self.openai_client.responses.create(
+        return self.openai_client.responses.create(  # type: ignore[no-matching-overload]
             model=chatgpt_deployment if chatgpt_deployment else chatgpt_model,
             input=input,
             **params,
@@ -993,7 +989,7 @@ class Approach(ABC):
         overrides: dict[str, Any],
         model: str,
         deployment: Optional[str],
-        usage: Optional[CompletionUsage] = None,
+        usage: Optional[CompletionUsage | ResponseUsage] = None,
         reasoning_effort: ReasoningEffort = None,
     ) -> ThoughtStep:
         properties: dict[str, Any] = {"model": model}

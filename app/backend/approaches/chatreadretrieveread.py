@@ -274,7 +274,7 @@ class ChatReadRetrieveReadApproach(Approach):
                             type="message",
                             role="assistant",
                             status="completed",
-                            content=[{"type": "output_text", "text": extra_info.answer, "annotations": []}],
+                            content=[{"type": "output_text", "text": extra_info.answer, "annotations": []}],  # type: ignore[list-item]
                         )
                     ],
                     status="completed",
