@@ -3,9 +3,11 @@ import logging
 
 import aiohttp
 import pytest
-from openai.types import CompletionUsage
-from openai.types.chat import ChatCompletion, ChatCompletionMessage
-from openai.types.chat.chat_completion import Choice
+from openai.types.responses import Response, ResponseOutputMessage, ResponseUsage
+from openai.types.responses.response_usage import (
+    InputTokensDetails,
+    OutputTokensDetails,
+)
 
 from prepdocslib.mediadescriber import (
     ContentUnderstandingDescriber,
@@ -143,11 +145,10 @@ async def test_contentunderstanding_analyze(monkeypatch, caplog):
 
 class MockAsyncOpenAI:
     def __init__(self, test_response):
-        self.chat = type("MockChat", (), {})()
-        self.chat.completions = MockChatCompletions(test_response)
+        self.responses = MockResponses(test_response)
 
 
-class MockChatCompletions:
+class MockResponses:
     def __init__(self, test_response):
         self.test_response = test_response
         self.create_calls = []
@@ -172,20 +173,32 @@ async def test_multimodal_model_describer(monkeypatch, model, deployment, expect
     # Expected description from the model
     expected_description = "This is a chart showing financial data trends over time."
 
-    # Create a mock OpenAI chat completion response
-    mock_response = ChatCompletion(
-        id="chatcmpl-123",
-        choices=[
-            Choice(
-                index=0,
-                message=ChatCompletionMessage(content=expected_description, role="assistant"),
-                finish_reason="stop",
+    # Create a mock OpenAI response
+    mock_response = Response(
+        id="resp-123",
+        object="response",
+        parallel_tool_calls=True,
+        tool_choice="auto",
+        tools=[],
+        created_at=1677652288,
+        model=expected_model_param,
+        output=[
+            ResponseOutputMessage(
+                id="msg-1",
+                type="message",
+                role="assistant",
+                status="completed",
+                content=[{"type": "output_text", "text": expected_description, "annotations": []}],
             )
         ],
-        created=1677652288,
-        model=expected_model_param,
-        object="chat.completion",
-        usage=CompletionUsage(completion_tokens=25, prompt_tokens=50, total_tokens=75),
+        status="completed",
+        usage=ResponseUsage(
+            input_tokens=50,
+            output_tokens=25,
+            total_tokens=75,
+            input_tokens_details=InputTokensDetails(cached_tokens=0),
+            output_tokens_details=OutputTokensDetails(reasoning_tokens=0),
+        ),
     )
 
     # Create mock OpenAI client
@@ -201,17 +214,17 @@ async def test_multimodal_model_describer(monkeypatch, model, deployment, expect
     assert result == expected_description
 
     # Verify the API was called with the correct parameters
-    assert len(mock_openai_client.chat.completions.create_calls) == 1
-    call_args = mock_openai_client.chat.completions.create_calls[0]
+    assert len(mock_openai_client.responses.create_calls) == 1
+    call_args = mock_openai_client.responses.create_calls[0]
 
     # Check model parameter - should be either the model or deployment based on our test case
     assert call_args["model"] == expected_model_param
 
-    # Check that max_tokens was set
-    assert call_args["max_tokens"] == 500
+    # Check that max_output_tokens was set
+    assert call_args["max_output_tokens"] == 500
 
-    # Check system message
-    messages = call_args["messages"]
+    # Check input messages
+    messages = call_args["input"]
     assert len(messages) == 2
     assert messages[0]["role"] == "system"
     assert "helpful assistant" in messages[0]["content"]
@@ -219,10 +232,10 @@ async def test_multimodal_model_describer(monkeypatch, model, deployment, expect
     # Check user message with image
     assert messages[1]["role"] == "user"
     assert len(messages[1]["content"]) == 2
-    assert messages[1]["content"][0]["type"] == "text"
+    assert messages[1]["content"][0]["type"] == "input_text"
     assert "Describe image" in messages[1]["content"][0]["text"]
-    assert messages[1]["content"][1]["type"] == "image_url"
-    assert "data:image/png;base64," in messages[1]["content"][1]["image_url"]["url"]
+    assert messages[1]["content"][1]["type"] == "input_image"
+    assert "data:image/png;base64," in messages[1]["content"][1]["image_url"]
 
 
 @pytest.mark.asyncio
@@ -231,13 +244,31 @@ async def test_multimodal_model_describer_empty_response(monkeypatch):
     image_bytes = b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x04\x00\x00\x00\xb5\x1c\x0c\x02\x00\x00\x00\x0bIDATx\xdac\xfc\xff\xff?\x00\x05\xfe\x02\xfe\xa3\xb8\xfb\x26\x00\x00\x00\x00IEND\xaeB`\x82"
 
     # Create mock response with empty content
-    mock_response = ChatCompletion(
-        id="chatcmpl-789",
-        choices=[],  # Empty choices array
-        created=1677652288,
+    mock_response = Response(
+        id="resp-789",
+        object="response",
+        parallel_tool_calls=True,
+        tool_choice="auto",
+        tools=[],
+        created_at=1677652288,
         model="gpt-4o-mini",
-        object="chat.completion",
-        usage=CompletionUsage(completion_tokens=0, prompt_tokens=50, total_tokens=50),
+        output=[
+            ResponseOutputMessage(
+                id="msg-1",
+                type="message",
+                role="assistant",
+                status="completed",
+                content=[{"type": "output_text", "text": "", "annotations": []}],
+            )
+        ],
+        status="completed",
+        usage=ResponseUsage(
+            input_tokens=50,
+            output_tokens=0,
+            total_tokens=50,
+            input_tokens_details=InputTokensDetails(cached_tokens=0),
+            output_tokens_details=OutputTokensDetails(reasoning_tokens=0),
+        ),
     )
 
     # Create mock OpenAI client

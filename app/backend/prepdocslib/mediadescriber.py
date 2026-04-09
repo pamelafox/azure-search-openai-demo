@@ -136,11 +136,11 @@ class MultimodalModelDescriber(MediaDescriber):
             before_sleep=before_retry_sleep,
         ):
             with attempt:
-                response = await self.openai_client.chat.completions.create(
+                response = await self.openai_client.responses.create(
                     model=self.model if self.deployment is None else self.deployment,
-                    max_tokens=500,
-                    seed=42,  # Keep responses more consistent across runs
-                    messages=[
+                    max_output_tokens=500,
+                    store=False,
+                    input=[
                         {
                             "role": "system",
                             "content": "You are a helpful assistant that describes images from organizational documents.",
@@ -150,14 +150,12 @@ class MultimodalModelDescriber(MediaDescriber):
                             "content": [
                                 {
                                     "text": "Describe image with no more than 5 sentences. Do not speculate about anything you don't know.",
-                                    "type": "text",
+                                    "type": "input_text",
                                 },
-                                {"image_url": {"url": image_datauri, "detail": "auto"}, "type": "image_url"},
+                                {"image_url": image_datauri, "type": "input_image"},
                             ],
                         },
                     ],
                 )
-        description = ""
-        if response.choices and response.choices[0].message.content:
-            description = response.choices[0].message.content.strip()
-        return description
+        description = response.output_text or ""
+        return description.strip()

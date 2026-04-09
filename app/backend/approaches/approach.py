@@ -36,18 +36,21 @@ from azure.search.documents.models import (
 )
 from openai import AsyncOpenAI, AsyncStream
 from openai.types import CompletionUsage
-from openai.types.chat import (
-    ChatCompletion,
-    ChatCompletionChunk,
-    ChatCompletionMessageFunctionToolCall,
-    ChatCompletionMessageParam,
-    ChatCompletionReasoningEffort,
-    ChatCompletionToolParam,
+from openai.types.responses import (
+    EasyInputMessageParam,
+    FunctionToolParam,
+    Response,
+    ResponseFunctionToolCall,
+    ResponseStreamEvent,
+    ResponseUsage,
 )
 
 from approaches.promptmanager import PromptManager
 from prepdocslib.blobmanager import AdlsBlobManager, BlobManager
 from prepdocslib.embeddings import ImageEmbeddings
+
+# Reasoning effort type for models that support it
+ReasoningEffort = str | None
 
 
 @dataclass
@@ -148,9 +151,9 @@ class SharePointResult:
 @dataclass
 class RewriteQueryResult:
     query: str
-    messages: list[ChatCompletionMessageParam]
-    completion: ChatCompletion
-    reasoning_effort: ChatCompletionReasoningEffort
+    messages: list[EasyInputMessageParam]
+    completion: Response
+    reasoning_effort: ReasoningEffort
 
 
 @dataclass
@@ -159,9 +162,9 @@ class ThoughtStep:
     description: Optional[Any]
     props: Optional[dict[str, Any]] = None
 
-    def update_token_usage(self, usage: CompletionUsage) -> None:
+    def update_token_usage(self, usage: CompletionUsage | ResponseUsage) -> None:
         if self.props:
-            self.props["token_usage"] = TokenUsageProps.from_completion_usage(usage)
+            self.props["token_usage"] = TokenUsageProps.from_usage(usage)
 
 
 @dataclass
@@ -203,7 +206,16 @@ class TokenUsageProps:
     total_tokens: int
 
     @classmethod
-    def from_completion_usage(cls, usage: CompletionUsage) -> "TokenUsageProps":
+    def from_usage(cls, usage: CompletionUsage | ResponseUsage) -> "TokenUsageProps":
+        if isinstance(usage, ResponseUsage):
+            return cls(
+                prompt_tokens=usage.input_tokens,
+                completion_tokens=usage.output_tokens,
+                reasoning_tokens=(
+                    usage.output_tokens_details.reasoning_tokens if usage.output_tokens_details else None
+                ),
+                total_tokens=usage.total_tokens,
+            )
         return cls(
             prompt_tokens=usage.prompt_tokens,
             completion_tokens=usage.completion_tokens,
@@ -214,26 +226,11 @@ class TokenUsageProps:
         )
 
 
-# GPT reasoning models don't support the same set of parameters as other models
+# GPT reasoning models use different parameters than other models
 # https://learn.microsoft.com/azure/ai-services/openai/how-to/reasoning
-@dataclass
-class GPTReasoningModelSupport:
-    streaming: bool
-    minimal_effort: bool
 
 
 class Approach(ABC):
-    # List of GPT reasoning models support
-    GPT_REASONING_MODELS = {
-        "o1": GPTReasoningModelSupport(streaming=False, minimal_effort=False),
-        "o3": GPTReasoningModelSupport(streaming=True, minimal_effort=False),
-        "o3-mini": GPTReasoningModelSupport(streaming=True, minimal_effort=False),
-        "o4-mini": GPTReasoningModelSupport(streaming=True, minimal_effort=False),
-        "gpt-5": GPTReasoningModelSupport(streaming=True, minimal_effort=True),
-        "gpt-5-nano": GPTReasoningModelSupport(streaming=True, minimal_effort=True),
-        "gpt-5-mini": GPTReasoningModelSupport(streaming=True, minimal_effort=True),
-    }
-    # Set a higher token limit for GPT reasoning models
     RESPONSE_DEFAULT_TOKEN_LIMIT = 1024
     RESPONSE_REASONING_DEFAULT_TOKEN_LIMIT = 8192
     QUERY_REWRITE_NO_RESPONSE = "0"
@@ -365,27 +362,25 @@ class Approach(ABC):
 
     def extract_rewritten_query(
         self,
-        chat_completion: ChatCompletion,
+        response: Response,
         user_query: str,
         no_response_token: Optional[str] = None,
     ) -> str:
-        response_message = chat_completion.choices[0].message
-
-        if response_message.tool_calls:
-            for tool_call in response_message.tool_calls:
-                if tool_call.type != "function":
-                    continue
-                arguments_payload = cast(ChatCompletionMessageFunctionToolCall, tool_call).function.arguments or "{}"
+        # Check output items for function calls
+        for item in response.output:
+            if isinstance(item, ResponseFunctionToolCall):
                 try:
-                    parsed_arguments = json.loads(arguments_payload)
+                    parsed_arguments = json.loads(item.arguments or "{}")
                 except json.JSONDecodeError:
                     continue
                 search_query = parsed_arguments.get("search_query")
                 if search_query and (no_response_token is None or search_query != no_response_token):
                     return search_query
 
-        if response_message.content:
-            candidate = response_message.content.strip()
+        # Fall back to text content
+        text = response.output_text
+        if text:
+            candidate = text.strip()
             if candidate and (no_response_token is None or candidate != no_response_token):
                 return candidate
 
@@ -401,19 +396,19 @@ class Approach(ABC):
         chatgpt_deployment: Optional[str],
         user_query: str,
         response_token_limit: int,
-        tools: Optional[list[ChatCompletionToolParam]] = None,
+        tools: Optional[list[FunctionToolParam]] = None,
         temperature: float = 0.0,
         no_response_token: Optional[str] = None,
     ) -> RewriteQueryResult:
         query_messages = [self.prompt_manager.build_system_prompt(prompt_template, prompt_variables)]
         rewrite_reasoning_effort = self.get_lowest_reasoning_effort(self.chatgpt_model)
 
-        chat_completion = cast(
-            ChatCompletion,
-            await self.create_chat_completion(
+        response = cast(
+            Response,
+            await self.create_response(
                 chatgpt_deployment,
                 chatgpt_model,
-                messages=query_messages,
+                input=query_messages,
                 overrides=overrides,
                 response_token_limit=response_token_limit,
                 temperature=temperature,
@@ -423,7 +418,7 @@ class Approach(ABC):
         )
 
         rewritten_query = self.extract_rewritten_query(
-            chat_completion,
+            response,
             user_query,
             no_response_token=no_response_token,
         )
@@ -431,13 +426,13 @@ class Approach(ABC):
         return RewriteQueryResult(
             query=rewritten_query,
             messages=query_messages,
-            completion=chat_completion,
+            completion=response,
             reasoning_effort=rewrite_reasoning_effort,
         )
 
     async def run_agentic_retrieval(
         self,
-        messages: list[ChatCompletionMessageParam],
+        messages: list[EasyInputMessageParam],
         knowledgebase_client: KnowledgeBaseRetrievalClient,
         search_index_name: str,
         filter_add_on: Optional[str] = None,
@@ -916,96 +911,106 @@ class Approach(ABC):
         else:
             return {"override_prompt": override_prompt}
 
+    @staticmethod
+    def is_reasoning_model(model: str) -> bool:
+        """Returns true if the model is a GPT-5 family reasoning model.
+        This project no longer supports o-series models as they are rarely used now,
+        and they have a slightly different programmatic interface that complicates the code.
+        """
+        return model.startswith("gpt-5")
+
     def get_response_token_limit(self, model: str, default_limit: int) -> int:
-        if model in self.GPT_REASONING_MODELS:
+        if self.is_reasoning_model(model):
             return self.RESPONSE_REASONING_DEFAULT_TOKEN_LIMIT
 
         return default_limit
 
-    def get_lowest_reasoning_effort(self, model: str) -> ChatCompletionReasoningEffort:
-        """
-        Return the lowest valid reasoning_effort for the given model.
-        """
-        if model not in self.GPT_REASONING_MODELS:
-            return None
-        if self.GPT_REASONING_MODELS[model].minimal_effort:
-            return "minimal"
-        return "low"
+    def get_lowest_reasoning_effort(self, model: str) -> ReasoningEffort:
+        """Return the lowest valid reasoning_effort for the given model."""
+        options = self.get_reasoning_effort_options(model)
+        return options[0] if options else None
 
-    def create_chat_completion(
+    @staticmethod
+    def get_reasoning_effort_options(model: str) -> list[str]:
+        """Return the valid reasoning_effort values for the given model.
+        Based off Responses API reference: https://developers.openai.com/api/reference/resources/responses/methods/create
+        """
+        if not Approach.is_reasoning_model(model):
+            return []
+        # gpt-5.1+ supports "none". Earlier gpt-5 models start at "minimal".
+        if model.startswith("gpt-5."):
+            minor = int(model[6:].split("-")[0])  # e.g. 4 from "gpt-5.4-pro"
+            options = ["none", "low", "medium", "high"]
+            # gpt-5.4+ supports "xhigh"
+            if minor >= 4:
+                options.append("xhigh")
+            return options
+        return ["minimal", "low", "medium", "high"]
+
+    def create_response(
         self,
         chatgpt_deployment: Optional[str],
         chatgpt_model: str,
-        messages: list[ChatCompletionMessageParam],
+        input: list[EasyInputMessageParam],
         overrides: dict[str, Any],
         response_token_limit: int,
         should_stream: bool = False,
-        tools: Optional[list[ChatCompletionToolParam]] = None,
+        tools: Optional[list[FunctionToolParam]] = None,
         temperature: Optional[float] = None,
-        n: Optional[int] = None,
-        reasoning_effort: Optional[ChatCompletionReasoningEffort] = None,
-    ) -> Awaitable[ChatCompletion] | Awaitable[AsyncStream[ChatCompletionChunk]]:
-        if chatgpt_model in self.GPT_REASONING_MODELS:
-            params: dict[str, Any] = {
-                # max_tokens is not supported
-                "max_completion_tokens": response_token_limit
-            }
+        reasoning_effort: ReasoningEffort = None,
+    ) -> Awaitable[Response] | Awaitable[AsyncStream[ResponseStreamEvent]]:
+        params: dict[str, Any] = {
+            "max_output_tokens": response_token_limit,
+            "store": False,
+        }
 
-            # Adjust parameters for reasoning models
-            supported_features = self.GPT_REASONING_MODELS[chatgpt_model]
-            if supported_features.streaming and should_stream:
-                params["stream"] = True
-                params["stream_options"] = {"include_usage": True}
-            params["reasoning_effort"] = reasoning_effort or overrides.get("reasoning_effort") or self.reasoning_effort
-
+        if self.is_reasoning_model(chatgpt_model):
+            # Only reasoning models accept the reasoning parameter
+            effort = reasoning_effort or overrides.get("reasoning_effort") or self.reasoning_effort
+            if effort:
+                params["reasoning"] = {"effort": effort}
         else:
-            # Include parameters that may not be supported for reasoning models
-            params = {
-                "max_tokens": response_token_limit,
-                "temperature": temperature or overrides.get("temperature", 0.3),
-            }
+            # Temperature is not supported by reasoning models
+            params["temperature"] = temperature or overrides.get("temperature", 0.3)
+
         if should_stream:
             params["stream"] = True
-            params["stream_options"] = {"include_usage": True}
 
         if tools is not None:
             params["tools"] = tools
 
         # Azure OpenAI takes the deployment name as the model name
-        seed_value: Optional[int] = overrides.get("seed", None)
-        return self.openai_client.chat.completions.create(  # type: ignore[no-matching-overload]
+        return self.openai_client.responses.create(
             model=chatgpt_deployment if chatgpt_deployment else chatgpt_model,
-            messages=messages,
-            seed=seed_value,
-            n=n or 1,
+            input=input,
             **params,
         )
 
     def format_thought_step_for_chatcompletion(
         self,
         title: str,
-        messages: list[ChatCompletionMessageParam],
+        messages: list[EasyInputMessageParam],
         overrides: dict[str, Any],
         model: str,
         deployment: Optional[str],
         usage: Optional[CompletionUsage] = None,
-        reasoning_effort: Optional[ChatCompletionReasoningEffort] = None,
+        reasoning_effort: ReasoningEffort = None,
     ) -> ThoughtStep:
         properties: dict[str, Any] = {"model": model}
         if deployment:
             properties["deployment"] = deployment
         # Only add reasoning_effort setting if the model supports it
-        if model in self.GPT_REASONING_MODELS:
+        if self.is_reasoning_model(model):
             properties["reasoning_effort"] = reasoning_effort or overrides.get(
                 "reasoning_effort", self.reasoning_effort
             )
         if usage:
-            properties["token_usage"] = TokenUsageProps.from_completion_usage(usage)
+            properties["token_usage"] = TokenUsageProps.from_usage(usage)
         return ThoughtStep(title, messages, properties)
 
     async def run(
         self,
-        messages: list[ChatCompletionMessageParam],
+        messages: list[EasyInputMessageParam],
         session_state: Any = None,
         context: dict[str, Any] = {},
     ) -> dict[str, Any]:
@@ -1013,7 +1018,7 @@ class Approach(ABC):
 
     async def run_stream(
         self,
-        messages: list[ChatCompletionMessageParam],
+        messages: list[EasyInputMessageParam],
         session_state: Any = None,
         context: dict[str, Any] = {},
     ) -> AsyncGenerator[dict[str, Any], None]:

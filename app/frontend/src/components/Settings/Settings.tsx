@@ -12,13 +12,13 @@ export interface SettingsProps {
     temperature: number;
     retrieveCount: number;
     agenticReasoningEffort: string;
-    seed: number | null;
     minimumSearchScore: number;
     minimumRerankerScore: number;
     useSemanticRanker: boolean;
     useSemanticCaptions: boolean;
     useQueryRewriting: boolean;
     reasoningEffort: string;
+    reasoningEffortOptions: string[];
     excludeCategory: string;
     includeCategory: string;
     retrievalMode: RetrievalMode;
@@ -55,13 +55,13 @@ export const Settings = ({
     temperature,
     retrieveCount,
     agenticReasoningEffort,
-    seed,
     minimumSearchScore,
     minimumRerankerScore,
     useSemanticRanker,
     useSemanticCaptions,
     useQueryRewriting,
     reasoningEffort,
+    reasoningEffortOptions,
     excludeCategory,
     includeCategory,
     retrievalMode,
@@ -99,8 +99,6 @@ export const Settings = ({
     const promptTemplateFieldId = useId();
     const temperatureId = useId();
     const temperatureFieldId = useId();
-    const seedId = useId();
-    const seedFieldId = useId();
     const agenticRetrievalId = useId();
     const agenticRetrievalFieldId = useId();
     const webSourceId = useId();
@@ -424,38 +422,6 @@ export const Settings = ({
                     </div>
                 </>
             )}
-            {showReasoningEffortOption && (
-                <>
-                    <div className={styles.settingsField}>
-                        <HelpCallout
-                            labelId={reasoningEffortId}
-                            fieldId={reasoningEffortFieldId}
-                            helpText={t("helpTexts.reasoningEffort")}
-                            label={t("labels.reasoningEffort")}
-                        />
-                        <Dropdown
-                            id={reasoningEffortFieldId}
-                            selectedOptions={[reasoningEffort]}
-                            value={
-                                reasoningEffort === "minimal"
-                                    ? t("labels.reasoningEffortOptions.minimal")
-                                    : reasoningEffort === "low"
-                                      ? t("labels.reasoningEffortOptions.low")
-                                      : reasoningEffort === "medium"
-                                        ? t("labels.reasoningEffortOptions.medium")
-                                        : t("labels.reasoningEffortOptions.high")
-                            }
-                            onOptionSelect={(_ev: SelectionEvents, data: OptionOnSelectData) => onChange("reasoningEffort", data.optionValue || "")}
-                            aria-labelledby={reasoningEffortId}
-                        >
-                            <Option value="minimal">{t("labels.reasoningEffortOptions.minimal")}</Option>
-                            <Option value="low">{t("labels.reasoningEffortOptions.low")}</Option>
-                            <Option value="medium">{t("labels.reasoningEffortOptions.medium")}</Option>
-                            <Option value="high">{t("labels.reasoningEffortOptions.high")}</Option>
-                        </Dropdown>
-                    </div>
-                </>
-            )}
             {showVectorOption && !useAgenticKnowledgeBase && (
                 <>
                     <VectorSettings
@@ -488,34 +454,49 @@ export const Settings = ({
                             aria-labelledby={promptTemplateId}
                         />
                     </div>
-                    <div className={styles.settingsField}>
-                        <HelpCallout
-                            labelId={temperatureId}
-                            fieldId={temperatureFieldId}
-                            helpText={t("helpTexts.temperature")}
-                            label={t("labels.temperature")}
-                        />
-                        <Input
-                            id={temperatureFieldId}
-                            type="number"
-                            min={0}
-                            max={1}
-                            step={0.1}
-                            defaultValue={temperature.toString()}
-                            onChange={(_ev, data) => onChange("temperature", parseFloat(data.value || "0"))}
-                            aria-labelledby={temperatureId}
-                        />
-                    </div>
-                    <div className={styles.settingsField}>
-                        <HelpCallout labelId={seedId} fieldId={seedFieldId} helpText={t("helpTexts.seed")} label={t("labels.seed")} />
-                        <Input
-                            id={seedFieldId}
-                            type="text"
-                            defaultValue={seed?.toString() || ""}
-                            onChange={(_ev, data) => onChange("seed", data.value ? parseInt(data.value) : null)}
-                            aria-labelledby={seedId}
-                        />
-                    </div>
+                    {!showReasoningEffortOption && (
+                        <div className={styles.settingsField}>
+                            <HelpCallout
+                                labelId={temperatureId}
+                                fieldId={temperatureFieldId}
+                                helpText={t("helpTexts.temperature")}
+                                label={t("labels.temperature")}
+                            />
+                            <Input
+                                id={temperatureFieldId}
+                                type="number"
+                                min={0}
+                                max={1}
+                                step={0.1}
+                                defaultValue={temperature.toString()}
+                                onChange={(_ev, data) => onChange("temperature", parseFloat(data.value || "0"))}
+                                aria-labelledby={temperatureId}
+                            />
+                        </div>
+                    )}
+                    {showReasoningEffortOption && reasoningEffortOptions.length > 0 && (
+                        <div className={styles.settingsField}>
+                            <HelpCallout
+                                labelId={reasoningEffortId}
+                                fieldId={reasoningEffortFieldId}
+                                helpText={t("helpTexts.reasoningEffort")}
+                                label={t("labels.reasoningEffort")}
+                            />
+                            <Dropdown
+                                id={reasoningEffortFieldId}
+                                selectedOptions={[reasoningEffort]}
+                                value={t(`labels.reasoningEffortOptions.${reasoningEffort}`) || reasoningEffort}
+                                onOptionSelect={(_ev: SelectionEvents, data: OptionOnSelectData) => onChange("reasoningEffort", data.optionValue || "")}
+                                aria-labelledby={reasoningEffortId}
+                            >
+                                {reasoningEffortOptions.map(option => (
+                                    <Option key={option} value={option}>
+                                        {t(`labels.reasoningEffortOptions.${option}`)}
+                                    </Option>
+                                ))}
+                            </Dropdown>
+                        </div>
+                    )}
 
                     {showMultimodalOptions && !useAgenticKnowledgeBase && (
                         <fieldset className={styles.fieldset + " " + styles.settingsField}>

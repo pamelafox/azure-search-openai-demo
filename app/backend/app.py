@@ -72,6 +72,7 @@ from config import (
     CONFIG_RAG_SEND_IMAGE_SOURCES,
     CONFIG_RAG_SEND_TEXT_SOURCES,
     CONFIG_REASONING_EFFORT_ENABLED,
+    CONFIG_REASONING_EFFORT_OPTIONS,
     CONFIG_SEARCH_CLIENT,
     CONFIG_SEMANTIC_RANKER_DEPLOYED,
     CONFIG_SHAREPOINT_SOURCE_ENABLED,
@@ -281,6 +282,7 @@ def config():
             "showReasoningEffortOption": current_app.config[CONFIG_REASONING_EFFORT_ENABLED],
             "streamingEnabled": current_app.config[CONFIG_STREAMING_ENABLED],
             "defaultReasoningEffort": current_app.config[CONFIG_DEFAULT_REASONING_EFFORT],
+            "reasoningEffortOptions": current_app.config[CONFIG_REASONING_EFFORT_OPTIONS],
             "defaultRetrievalReasoningEffort": current_app.config[CONFIG_DEFAULT_RETRIEVAL_REASONING_EFFORT],
             "showVectorOption": current_app.config[CONFIG_VECTOR_SEARCH_ENABLED],
             "showUserUpload": current_app.config[CONFIG_USER_UPLOAD_ENABLED],
@@ -676,11 +678,9 @@ async def setup_clients():
     )
     current_app.config[CONFIG_DEFAULT_REASONING_EFFORT] = OPENAI_REASONING_EFFORT
     current_app.config[CONFIG_DEFAULT_RETRIEVAL_REASONING_EFFORT] = AGENTIC_KNOWLEDGEBASE_REASONING_EFFORT
-    current_app.config[CONFIG_REASONING_EFFORT_ENABLED] = OPENAI_CHATGPT_MODEL in Approach.GPT_REASONING_MODELS
-    current_app.config[CONFIG_STREAMING_ENABLED] = (
-        OPENAI_CHATGPT_MODEL not in Approach.GPT_REASONING_MODELS
-        or Approach.GPT_REASONING_MODELS[OPENAI_CHATGPT_MODEL].streaming
-    )
+    current_app.config[CONFIG_REASONING_EFFORT_ENABLED] = Approach.is_reasoning_model(OPENAI_CHATGPT_MODEL)
+    current_app.config[CONFIG_REASONING_EFFORT_OPTIONS] = Approach.get_reasoning_effort_options(OPENAI_CHATGPT_MODEL)
+    current_app.config[CONFIG_STREAMING_ENABLED] = True
     current_app.config[CONFIG_VECTOR_SEARCH_ENABLED] = bool(USE_VECTORS)
     current_app.config[CONFIG_USER_UPLOAD_ENABLED] = bool(USE_USER_UPLOAD)
     current_app.config[CONFIG_LANGUAGE_PICKER_ENABLED] = ENABLE_LANGUAGE_PICKER

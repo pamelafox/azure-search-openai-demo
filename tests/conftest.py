@@ -21,13 +21,13 @@ from azure.search.documents.indexes.models import (
 )
 from azure.search.documents.knowledgebases.aio import KnowledgeBaseRetrievalClient
 from azure.storage.blob.aio import BlobServiceClient, ContainerClient
-from openai.types import CompletionUsage, CreateEmbeddingResponse, Embedding
-from openai.types.chat import ChatCompletion, ChatCompletionChunk
-from openai.types.chat.chat_completion import (
-    ChatCompletionMessage,
-    Choice,
-)
+from openai.types import CreateEmbeddingResponse, Embedding
 from openai.types.create_embedding_response import Usage
+from openai.types.responses import Response, ResponseOutputMessage, ResponseUsage
+from openai.types.responses.response_usage import (
+    InputTokensDetails,
+    OutputTokensDetails,
+)
 
 import app
 import core
@@ -137,97 +137,69 @@ def mock_openai_embedding(monkeypatch):
 
 @pytest.fixture
 def mock_openai_chatcompletion(monkeypatch):
-    class AsyncChatCompletionIterator:
+    class MockResponseEvent:
+        def __init__(self, event_type: str, delta: str | None = None, response: Response | None = None):
+            self.type = event_type
+            self.delta = delta
+            self.response = response
+
+    def make_response_usage(usage: dict[str, Any]) -> ResponseUsage:
+        details = usage.get("completion_tokens_details", {})
+        return ResponseUsage(
+            input_tokens=usage["prompt_tokens"],
+            output_tokens=usage["completion_tokens"],
+            total_tokens=usage["total_tokens"],
+            input_tokens_details=InputTokensDetails(cached_tokens=0),
+            output_tokens_details=OutputTokensDetails(reasoning_tokens=details.get("reasoning_tokens", 0)),
+        )
+
+    class AsyncResponseIterator:
         def __init__(self, answer: str, reasoning: bool, usage: dict[str, Any]):
-            chunk_id = "test-id"
-            model = "gpt-4.1-mini" if not reasoning else "o3-mini"
-            self.responses = [
-                {"object": "chat.completion.chunk", "choices": [], "id": chunk_id, "model": model, "created": 1},
-                {
-                    "object": "chat.completion.chunk",
-                    "choices": [{"delta": {"role": "assistant"}, "index": 0, "finish_reason": None}],
-                    "id": chunk_id,
-                    "model": model,
-                    "created": 1,
-                },
-            ]
+            model = "gpt-4.1-mini" if not reasoning else "gpt-5"
+            self.events: list[MockResponseEvent] = []
             # Split at << to simulate chunked responses
             if answer.find("<<") > -1:
                 parts = answer.split("<<")
-                self.responses.append(
-                    {
-                        "object": "chat.completion.chunk",
-                        "choices": [
-                            {
-                                "delta": {"role": "assistant", "content": parts[0] + "<<"},
-                                "index": 0,
-                                "finish_reason": None,
-                            }
-                        ],
-                        "id": chunk_id,
-                        "model": model,
-                        "created": 1,
-                    }
-                )
-                self.responses.append(
-                    {
-                        "object": "chat.completion.chunk",
-                        "choices": [
-                            {"delta": {"role": "assistant", "content": parts[1]}, "index": 0, "finish_reason": None}
-                        ],
-                        "id": chunk_id,
-                        "model": model,
-                        "created": 1,
-                    }
-                )
-                self.responses.append(
-                    {
-                        "object": "chat.completion.chunk",
-                        "choices": [{"delta": {"role": None, "content": None}, "index": 0, "finish_reason": "stop"}],
-                        "id": chunk_id,
-                        "model": model,
-                        "created": 1,
-                    }
-                )
+                self.events.append(MockResponseEvent("response.output_text.delta", delta=parts[0] + "<<"))
+                self.events.append(MockResponseEvent("response.output_text.delta", delta=parts[1]))
             else:
-                self.responses.append(
-                    {
-                        "object": "chat.completion.chunk",
-                        "choices": [{"delta": {"content": answer}, "index": 0, "finish_reason": None}],
-                        "id": chunk_id,
-                        "model": model,
-                        "created": 1,
-                    }
-                )
+                self.events.append(MockResponseEvent("response.output_text.delta", delta=answer))
 
-            self.responses.append(
-                {
-                    "object": "chat.completion.chunk",
-                    "choices": [],
-                    "id": chunk_id,
-                    "model": model,
-                    "created": 1,
-                    "usage": usage,
-                }
+            completed_response = Response(
+                id="test-id",
+                object="response",
+                parallel_tool_calls=True,
+                tool_choice="auto",
+                tools=[],
+                created_at=0,
+                model=model,
+                output=[
+                    ResponseOutputMessage(
+                        id="msg-test",
+                        type="message",
+                        role="assistant",
+                        status="completed",
+                        content=[{"type": "output_text", "text": answer, "annotations": []}],
+                    )
+                ],
+                status="completed",
+                usage=make_response_usage(usage),
             )
+            self.events.append(MockResponseEvent("response.completed", response=completed_response))
 
         def __aiter__(self):
             return self
 
         async def __anext__(self):
-            if self.responses:
-                return ChatCompletionChunk.model_validate(self.responses.pop(0))
-            else:
-                raise StopAsyncIteration
+            if self.events:
+                return self.events.pop(0)
+            raise StopAsyncIteration
 
     async def mock_acreate(*args, **kwargs):
-        # The only two possible values for seed:
-        assert kwargs.get("seed") is None or kwargs.get("seed") == 42
-
-        messages = kwargs["messages"]
+        messages = kwargs["input"]
         model = kwargs["model"]
-        reasoning = model == "o3-mini"
-        completion_usage: dict[str, any] = {
+        reasoning = model == "gpt-5"
+        completion_usage: dict[str, Any] = {
             "completion_tokens": 896,
             "prompt_tokens": 23,
             "total_tokens": 919,
@@ -258,31 +230,37 @@ def mock_openai_chatcompletion(monkeypatch):
             for msg in messages:
                 if msg.get("role") == "system":
                     content = str(msg.get("content", ""))
-                    print(f"DEBUG: System message content length: {len(content)}")
-                    print(f"DEBUG: Contains followup?: {'Generate 3 very brief follow-up questions' in content}")
                     if "Generate 3 very brief follow-up questions" in content:
                         answer = (
                             "The capital of France is Paris. [Benefit_Options-2.pdf]. <<What is the capital of Spain?>>"
                         )
                         break
         if "stream" in kwargs and kwargs["stream"] is True:
-            return AsyncChatCompletionIterator(answer, reasoning, completion_usage)
+            return AsyncResponseIterator(answer, reasoning, completion_usage)
         else:
-            return ChatCompletion(
-                object="chat.completion",
-                choices=[
-                    Choice(
-                        message=ChatCompletionMessage(role="assistant", content=answer), finish_reason="stop", index=0
+            return Response(
+                id="test-123",
+                object="response",
+                parallel_tool_calls=True,
+                tool_choice="auto",
+                tools=[],
+                created_at=0,
+                model="test-model",
+                output=[
+                    ResponseOutputMessage(
+                        id="msg-test",
+                        type="message",
+                        role="assistant",
+                        status="completed",
+                        content=[{"type": "output_text", "text": answer, "annotations": []}],
                     )
                 ],
-                id="test-123",
-                created=0,
-                model="test-model",
-                usage=CompletionUsage.model_validate(completion_usage),
+                status="completed",
+                usage=make_response_usage(completion_usage),
             )
 
     def patch(openai_client):
-        monkeypatch.setattr(openai_client.chat.completions, "create", mock_acreate)
+        monkeypatch.setattr(openai_client.responses, "create", mock_acreate)
 
     return patch
 
@@ -430,15 +408,15 @@ reasoning_envs = [
     {
         "OPENAI_HOST": "azure",
         "AZURE_OPENAI_SERVICE": "test-openai-service",
-        "AZURE_OPENAI_CHATGPT_MODEL": "o3-mini",
-        "AZURE_OPENAI_CHATGPT_DEPLOYMENT": "o3-mini",
+        "AZURE_OPENAI_CHATGPT_MODEL": "gpt-5",
+        "AZURE_OPENAI_CHATGPT_DEPLOYMENT": "gpt-5",
         "AZURE_OPENAI_EMB_DEPLOYMENT": "test-ada",
     },
     {
         "OPENAI_HOST": "azure",
         "AZURE_OPENAI_SERVICE": "test-openai-service",
-        "AZURE_OPENAI_CHATGPT_MODEL": "o3-mini",
-        "AZURE_OPENAI_CHATGPT_DEPLOYMENT": "o3-mini",
+        "AZURE_OPENAI_CHATGPT_MODEL": "gpt-5",
+        "AZURE_OPENAI_CHATGPT_DEPLOYMENT": "gpt-5",
         "AZURE_OPENAI_EMB_DEPLOYMENT": "test-ada",
         "AZURE_OPENAI_REASONING_EFFORT": "low",
     },

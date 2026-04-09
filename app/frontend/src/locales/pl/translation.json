@@ -32,7 +32,6 @@
         "fileDeleted": "Plik usunięty"
     },
     "developerSettings": "Ustawienia deweloperskie",
-
     "chatEmptyStateTitle": "Rozmawiaj ze swoimi danymi",
     "chatEmptyStateSubtitle": "Zapytaj o cokolwiek lub spróbuj przykładu",
     "defaultExamples": {
@@ -51,7 +50,6 @@
     "generatingAnswer": "Generowanie odpowiedzi",
     "citationWithColon": "Cytat:",
     "followupQuestions": "Pytania uzupełniające:",
-
     "tooltips": {
         "submitQuestion": "Wyślij pytanie",
         "stopStreaming": "Zatrzymaj przesyłanie strumieniowe",
@@ -65,13 +63,11 @@
         "copy": "Kopiuj",
         "copied": "Skopiowano!"
     },
-
-    "headerTexts":{
+    "headerTexts": {
         "thoughtProcess": "Tok rozumowania",
         "supportingContent": "Treść pomocnicza",
         "citation": "Cytat"
     },
-
     "labels": {
         "toggleMenu": "Przełącz menu",
         "languagePicker": "Wybierz swój język",
@@ -79,7 +75,6 @@
         "closeButton": "Zamknij",
         "promptTemplate": "Nadpisz szablon podpowiedzi",
         "temperature": "Temperatura",
-        "seed": "Ziarno",
         "minimumSearchScore": "Minimalny wynik wyszukiwania",
         "minimumRerankerScore": "Minimalny wynik sortowania semantycznego",
         "retrieveCount": "Pobierz tyle wyników wyszukiwania:",
@@ -100,10 +95,12 @@
         "useQueryRewriting": "Użyj przepisywania zapytań do pobierania",
         "reasoningEffort": "Poziom rozumowania",
         "reasoningEffortOptions": {
-            "minimal": "Minimal (tylko GPT-5)",
+            "none": "None",
+            "minimal": "Minimal",
             "low": "Niski",
             "medium": "Średni",
-            "high": "Wysoki"
+            "high": "Wysoki",
+            "xhigh": "Extra High"
         },
         "useSuggestFollowupQuestions": "Sugeruj pytania uzupełniające",
         "useAgenticKnowledgeBase": "Użyj agentowego pobierania",
@@ -111,9 +108,9 @@
         "useSharePointSource": "Uwzględnij źródło SharePoint",
         "llmInputs": "Źródła danych wejściowych LLM",
         "llmInputsOptions": {
-                "texts": "Tekst",
-                "images": "Obrazy",
-                "textAndImages": "Obrazy i tekst"
+            "texts": "Tekst",
+            "images": "Obrazy",
+            "textAndImages": "Obrazy i tekst"
         },
         "retrievalMode": {
             "label": "Tryb pobierania",
@@ -135,40 +132,25 @@
         "useGroupsSecurityFilter": "Użyj filtra bezpieczeństwa grup",
         "shouldStream": "Strumieniuj odpowiedzi czatu"
     },
-
     "helpTexts": {
-        "promptTemplate":
-            "Nadpisuje podpowiedź używaną do generowania odpowiedzi na podstawie pytania i wyników wyszukiwania. Aby dodać do istniejącej podpowiedzi zamiast zastępować ją w całości, rozpocznij swoją podpowiedź od '>>>'.",
-        "temperature":
-            "Ustawia temperaturę żądania do LLM, które generuje odpowiedź. Wyższe temperatury skutkują bardziej kreatywnymi odpowiedziami, ale mogą być mniej ugruntowane.",
-        "seed": "Ustawia ziarno w celu poprawy powtarzalności odpowiedzi modelu. Ziarno może być dowolną liczbą całkowitą.",
-        "searchScore":
-             "Ustawia minimalny wynik dla wyników wyszukiwania z Azure AI Search. Zakres wyniku zależy od tego, czy używasz trybu hybrydowego (domyślnego), tylko wektorów czy tylko tekstu.",
-        "rerankerScore":
-             "Ustawia minimalny wynik dla wyników wyszukiwania z sortowania semantycznego. Wynik zawsze mieści się w zakresie od 0 do 4. Im wyższy, tym bardziej semantycznie dopasowany wynik do pytania.",
-        "retrieveNumber":
-             "Ustawia liczbę wyników wyszukiwania do pobrania z Azure AI Search. Więcej wyników może zwiększyć szansę znalezienia poprawnej odpowiedzi, ale może sprawić, że model się „zgubi w środku”.",
-        "agenticReasoningEffort":
-            "Kontroluje, ile rozumowania agent stosuje podczas budowania planów wielozapytaniowych. Większy wysiłek może poprawić trafność, ale zwiększa liczbę tokenów i opóźnienie.",
-        "includeCategory":
-            "Określa kategorię do uwzględnienia w wynikach wyszukiwania. W domyślnym zestawie danych nie są używane kategorie.",
-         "excludeCategory":
-            "Określa kategorię do wykluczenia z wyników wyszukiwania. W domyślnym zestawie danych nie są używane kategorie.",
-         "useSemanticReranker":
-            "Włącza semantyczny ranker Azure AI Search, model, który ponownie sortuje wyniki wyszukiwania na podstawie podobieństwa semantycznego do zapytania użytkownika.",
-        "useQueryRewriting":
-            "Włącza przepisywanie zapytań w Azure AI Search, proces modyfikujący zapytanie użytkownika w celu poprawy wyników wyszukiwania. Wymaga włączenia semantycznego rankera.",
-        "reasoningEffort":
-            "Ustawia poziom rozumowania dla LLM. Wyższe wartości powodują więcej rozumowania, ale mogą wydłużyć czas generowania odpowiedzi. Domyślnie średni.",
-        "useSemanticCaptions":
-             "Wysyła do LLM semantyczne podpisy zamiast pełnych wyników wyszukiwania. Semantyczny podpis jest wyodrębniany z wyniku wyszukiwania podczas procesu sortowania semantycznego.",
+        "promptTemplate": "Nadpisuje podpowiedź używaną do generowania odpowiedzi na podstawie pytania i wyników wyszukiwania. Aby dodać do istniejącej podpowiedzi zamiast zastępować ją w całości, rozpocznij swoją podpowiedź od '>>>'.",
+        "temperature": "Ustawia temperaturę żądania do LLM, które generuje odpowiedź. Wyższe temperatury skutkują bardziej kreatywnymi odpowiedziami, ale mogą być mniej ugruntowane.",
+        "searchScore": "Ustawia minimalny wynik dla wyników wyszukiwania z Azure AI Search. Zakres wyniku zależy od tego, czy używasz trybu hybrydowego (domyślnego), tylko wektorów czy tylko tekstu.",
+        "rerankerScore": "Ustawia minimalny wynik dla wyników wyszukiwania z sortowania semantycznego. Wynik zawsze mieści się w zakresie od 0 do 4. Im wyższy, tym bardziej semantycznie dopasowany wynik do pytania.",
+        "retrieveNumber": "Ustawia liczbę wyników wyszukiwania do pobrania z Azure AI Search. Więcej wyników może zwiększyć szansę znalezienia poprawnej odpowiedzi, ale może sprawić, że model się „zgubi w środku”.",
+        "agenticReasoningEffort": "Kontroluje, ile rozumowania agent stosuje podczas budowania planów wielozapytaniowych. Większy wysiłek może poprawić trafność, ale zwiększa liczbę tokenów i opóźnienie.",
+        "includeCategory": "Określa kategorię do uwzględnienia w wynikach wyszukiwania. W domyślnym zestawie danych nie są używane kategorie.",
+        "excludeCategory": "Określa kategorię do wykluczenia z wyników wyszukiwania. W domyślnym zestawie danych nie są używane kategorie.",
+        "useSemanticReranker": "Włącza semantyczny ranker Azure AI Search, model, który ponownie sortuje wyniki wyszukiwania na podstawie podobieństwa semantycznego do zapytania użytkownika.",
+        "useQueryRewriting": "Włącza przepisywanie zapytań w Azure AI Search, proces modyfikujący zapytanie użytkownika w celu poprawy wyników wyszukiwania. Wymaga włączenia semantycznego rankera.",
+        "reasoningEffort": "Ustawia poziom rozumowania dla LLM. Wyższe wartości powodują więcej rozumowania, ale mogą wydłużyć czas generowania odpowiedzi. Domyślnie średni.",
+        "useSemanticCaptions": "Wysyła do LLM semantyczne podpisy zamiast pełnych wyników wyszukiwania. Semantyczny podpis jest wyodrębniany z wyniku wyszukiwania podczas procesu sortowania semantycznego.",
         "suggestFollowupQuestions": "Prosi LLM o sugerowanie pytań uzupełniających na podstawie zapytania użytkownika.",
         "textEmbeddings": "Po wybraniu, wyszukiwanie będzie korzystać z osadzeń z modelu tekstowego dla wyodrębnionych fragmentów tekstu.",
         "imageEmbeddings": "Po wybraniu, wyszukiwanie będzie korzystać z osadzeń z modelu multimodalnego dla wyodrębnionych obrazów.",
         "llmTextInputs": "Po wybraniu, treść tekstowa z wyników wyszukiwania zostanie przesłana do LLM jako kontekst.",
         "llmImageInputs": "Po wybraniu, obrazy z wyników wyszukiwania zostaną przesłane do LLM jako kontekst.",
-        "retrievalMode":
-            "Ustawia tryb pobierania dla zapytania Azure AI Search. `Wektory + Tekst (Hybrydowy)` łączy wyszukiwanie wektorowe i pełnotekstowe, `Wektory` używa tylko wyszukiwania wektorowego, a `Tekst` tylko pełnotekstowego. Hybrydowy jest zazwyczaj optymalny.",
+        "retrievalMode": "Ustawia tryb pobierania dla zapytania Azure AI Search. `Wektory + Tekst (Hybrydowy)` łączy wyszukiwanie wektorowe i pełnotekstowe, `Wektory` używa tylko wyszukiwania wektorowego, a `Tekst` tylko pełnotekstowego. Hybrydowy jest zazwyczaj optymalny.",
         "streamChat": "Ciągle przesyła odpowiedź do interfejsu czatu w miarę jej generowania.",
         "useOidSecurityFilter": "Filtruj wyniki wyszukiwania na podstawie OID uwierzytelnionego użytkownika.",
         "useGroupsSecurityFilter": "Filtruj wyniki wyszukiwania na podstawie grup uwierzytelnionego użytkownika.",
@@ -176,7 +158,6 @@
         "useWebSource": "Rozszerz pobieranie o wyniki wyszukiwania w sieci wraz z indeksowanym zestawem danych.",
         "useSharePointSource": "Rozszerz pobieranie o zawartość SharePoint wraz z indeksowanym zestawem danych."
     },
-
     "overallSettings": "Overall settings",
     "searchSettings": "Search settings",
     "llmSettings": "LLM settings"

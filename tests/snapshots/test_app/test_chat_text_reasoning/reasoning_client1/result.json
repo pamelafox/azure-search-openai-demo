@@ -20,9 +20,9 @@
                     }
                 ],
                 "props": {
-                    "deployment": "o3-mini",
-                    "model": "o3-mini",
-                    "reasoning_effort": "low",
+                    "deployment": "gpt-5",
+                    "model": "gpt-5",
+                    "reasoning_effort": "minimal",
                     "token_usage": {
                         "completion_tokens": 896,
                         "prompt_tokens": 23,
@@ -86,8 +86,8 @@
                     }
                 ],
                 "props": {
-                    "deployment": "o3-mini",
-                    "model": "o3-mini",
+                    "deployment": "gpt-5",
+                    "model": "gpt-5",
                     "reasoning_effort": "low",
                     "token_usage": {
                         "completion_tokens": 896,

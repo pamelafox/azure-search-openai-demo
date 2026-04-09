@@ -75,7 +75,6 @@
         "closeButton": "Luk",
         "promptTemplate": "Overskriv promptskabelon",
         "temperature": "Temperatur",
-        "seed": "Seed",
         "minimumSearchScore": "Minimum søgescore",
         "minimumRerankerScore": "Minimum reranker score",
         "retrieveCount": "Hent dette antal søgeresultater:",
@@ -95,10 +94,12 @@
         "useQueryRewriting": "Brug forespørgselsomskrivning til informationsgenfinding",
         "reasoningEffort": "Ræsonnementsindsats",
         "reasoningEffortOptions": {
-            "minimal": "Minimal (kun GPT-5)",
+            "none": "None",
+            "minimal": "Minimal",
             "low": "Lav",
             "medium": "Medium",
-            "high": "Høj"
+            "high": "Høj",
+            "xhigh": "Extra High"
         },
         "useSuggestFollowupQuestions": "Foreslå opfølgende spørgsmål",
         "useAgenticKnowledgeBase": "Brug agentisk hentning",
@@ -132,7 +133,6 @@
     "helpTexts": {
         "promptTemplate": "Overskriver prompten brugt til at generere svaret baseret på spørgsmålet og søgeresultaterne. For at tilføje til eksisterende prompt i stedet for at erstatte hele prompten, start din prompt med '>>>'.",
         "temperature": "Indstiller temperaturen på forespørgslen til LLM'en, der genererer svaret. Højere temperaturer resulterer i mere kreative svar, men de kan være mindre jordnære.",
-        "seed": "Indstiller et seed for at forbedre reproducerbarheden af modellens svar. Seedet kan være et hvilket som helst heltal.",
         "searchScore": "Indstiller en minimumscore for søgeresultater fra Azure AI Search. Scoreområdet afhænger af, om du bruger hybrid (standard), kun vektorer eller kun tekst.",
         "rerankerScore": "Indstiller en minimumscore for søgeresultater fra den semantiske omrangør. Scoren ligger altid mellem 0-4. Jo højere score, jo mere semantisk relevant er resultatet for spørgsmålet.",
         "retrieveNumber": "Indstiller antallet af søgeresultater, der skal hentes fra Azure AI Search. Flere resultater kan øge sandsynligheden for at finde det korrekte svar, men kan få modellen til at 'fare vild i midten' (eng: lost in the middle).",
@@ -146,8 +146,8 @@
         "suggestFollowupQuestions": "Beder LLM'en om at foreslå opfølgende spørgsmål baseret på brugerens forespørgsel.",
         "textEmbeddings": "Når valgt, vil søgningen bruge indlejringer fra tekst-kun indlejringsmodellen af udtrukne tekstbidder.",
         "imageEmbeddings": "Når valgt, vil søgningen bruge indlejringer fra den multimodale indlejringsmodel af udtrukne billeder.",
-    "llmTextInputs": "Når valgt, sendes tekstindhold fra søgeresultaterne til LLM'en som kontekst.",
-    "llmImageInputs": "Når valgt, sendes billeder fra søgeresultaterne til LLM'en som kontekst.",
+        "llmTextInputs": "Når valgt, sendes tekstindhold fra søgeresultaterne til LLM'en som kontekst.",
+        "llmImageInputs": "Når valgt, sendes billeder fra søgeresultaterne til LLM'en som kontekst.",
         "llmInputs": "Indstiller hvad der sendes til visionsmodellen. 'Billeder og tekst' sender både billeder og tekst til modellen, 'Billeder' sender kun billeder og 'Tekst' sender kun tekst.",
         "retrievalMode": "Indstiller søgemodus for forespørgslen i Azure AI Search. `Vektorer + Tekst (Hybrid)` bruger en kombination af vektorsøgning og fuldtekstsøgning, `Vektorer` bruger kun vektorsøgning, og `Tekst` bruger kun fuldtekstsøgning. Hybrid er generelt optimalt.",
         "streamChat": "Streamer kontinuerligt svaret til brugergrænsefladen, imens det genereres.",
