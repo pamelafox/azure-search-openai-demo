@@ -2,7 +2,7 @@
 
 The frontend and backend of this RAG chat application exchange messages over HTTP, using both regular JSON for single responses and streaming newline-delimited JSON (NDJSON) for streamed responses.
 
-The HTTP protocol is inspired by the [OpenAI ChatCompletion API](https://platform.openai.com/docs/guides/text-generation/chat-completions-api), but contains additional fields required for the chat application.
+The HTTP protocol is inspired by the [OpenAI Responses API](https://platform.openai.com/docs/api-reference/responses), but contains additional fields required for the chat application.
 
 Table of contents:
 
@@ -55,7 +55,7 @@ The example belows represents a valid and compliant request body to the chat app
 These are the currently supported properties in the `context` object:
 
 * `"overrides"`: An object containing settings for the chat application.
-  * `"temperature"`: The temperature to use for the LLM for the question-answering chat completion call.
+  * `"temperature"`: The temperature to use for the LLM for the question-answering response call.
   * `"top"`: The number of results to return from Azure AI Search.
   * `"retrieval_mode"`: The mode to use for the Azure AI Search step. Can be "hybrid", "vectors", or "text".
   * `"semantic_ranker"`: Whether to use the semantic ranker for the Azure AI Search step.
@@ -96,7 +96,7 @@ The response contains this header:
 
 A successful response has a status code of 200, and the body contains a JSON object with the following properties:
 
-* `"message"`: An object containing the actual content of the response.  See [Answer formatting](#answer-formatting). _Comes from the [OpenAI chat completion object](https://platform.openai.com/docs/api-reference/chat/object)._
+* `"output_text"`: A string containing the actual content of the response. See [Answer formatting](#answer-formatting).
 * `"session_state"`: _Optional_. An object containing the "memory" for the chat app, such as the session ID for chat history storage.
 * `"context"`: _Optional_. An object containing additional details needed for the chat app, used for citation display and the thought process tab. See [response context properties](#response-context-properties).
 
@@ -104,12 +104,7 @@ Here's an example JSON response:
 
 ```json
 {
-    "message": {
-        "content": "There is no specific information provided about what is included in the Northwind Health Plus plan that is not in the standard plan. It is recommended to read the plan details carefully and ask questions to understand the specific benefits of the Northwind Health Plus plan [Northwind_Standard_Benefits_Details.pdf#page=91].",
-        "function_call": null,
-        "role": "assistant",
-        "tool_calls": null
-    },
+    "output_text": "There is no specific information provided about what is included in the Northwind Health Plus plan that is not in the standard plan. It is recommended to read the plan details carefully and ask questions to understand the specific benefits of the Northwind Health Plus plan [Northwind_Standard_Benefits_Details.pdf#page=91].",
     "context": {
         "data_points": {
             "text": [
@@ -226,17 +221,16 @@ The first chunk contains the `context` property, since that is available before 
 
 Each JSON object contains the following properties:
 
-* `"delta"`: An object containing the actual content of the response, a token at a time. See [Answer formatting](#answer-formatting). _Comes from the [OpenAI chat completion chunk object](https://platform.openai.com/docs/api-reference/chat/streaming)._
-* `"context"`: _Optional_. An object containing additional details needed for the chat app. Each application can define its own properties. See [response context properties](#response-context-properties).
+* `"type"`: A string indicating the event type. Either `"response.context"` for context events or `"response.output_text.delta"` for text content chunks. _The `response.output_text.delta` type matches the [OpenAI Responses API streaming event](https://platform.openai.com/docs/api-reference/responses-streaming)._
+* `"delta"`: _(For `response.output_text.delta` events only)_ A string containing a text chunk of the answer.
+* `"context"`: _(For `response.context` events only)_ An object containing additional details needed for the chat app. See [response context properties](#response-context-properties).
 * `"session_state"`: _Optional_. An object containing the "memory" for the chat app, such as a user ID.
 
 Here's an example of the first three JSON objects in a streaming response:
 
 ```json
 {
-    "delta": {
-        "role": "assistant"
-    },
+    "type": "response.context",
     "context": {
         "data_points": {
             "text": [
@@ -313,22 +307,10 @@ Here's an example of the first three JSON objects in a streaming response:
             }
         ]
     },
-    "session_state": null,
-}{
-    "delta": {
-        "content": null,
-        "function_call": null,
-        "role": "assistant",
-        "tool_calls": null
-    }
-}{
-    "delta": {
-        "content": "The",
-        "function_call": null,
-        "role": null,
-        "tool_calls": null
-    }
+    "session_state": null
 }
+{"type": "response.output_text.delta", "delta": "The"}
+{"type": "response.output_text.delta", "delta": " Northwind"}
 ```
 
 #### Error in streamed response

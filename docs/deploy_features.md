@@ -3,7 +3,7 @@
 This document covers optional features that can be enabled in the deployed Azure resources.
 You should typically enable these features before running `azd up`. Once you've set them, return to the [deployment steps](../README.md#deploying).
 
-* [Using different chat completion models](#using-different-chat-completion-models)
+* [Using different chat models](#using-different-chat-models)
 * [Using reasoning models](#using-reasoning-models)
 * [Using different embedding models](#using-different-embedding-models)
 * [Enabling multimodal embeddings and answering](#enabling-multimodal-embeddings-and-answering)
@@ -22,9 +22,9 @@ You should typically enable these features before running `azd up`. Once you've 
 * [Deploying with private endpoints](#deploying-with-private-endpoints)
 * [Using local parsers](#using-local-parsers)
 
-## Using different chat completion models
+## Using different chat models
 
-As of early June 2025, the default chat completion model is `gpt-4.1-mini`. If you deployed this sample before that date, the default model is `gpt-3.5-turbo` or `gpt-4o-mini`. You can change the chat completion model to any Azure OpenAI chat model that's available in your Azure OpenAI resource region by following these steps:
+As of early June 2025, the default chat model is `gpt-4.1-mini`. If you deployed this sample before that date, the default model is `gpt-3.5-turbo` or `gpt-4o-mini`. You can change the chat model to any Azure OpenAI model that's available in your Azure OpenAI resource region by following these steps:
 
 1. To set the name of the deployment, run this command with a unique name in your Azure OpenAI account. You can use any deployment name, as long as it's unique in your Azure OpenAI account. For convenience, many developers use the same deployment name as the model name, but this is not required.
 

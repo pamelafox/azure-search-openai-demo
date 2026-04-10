@@ -12,7 +12,7 @@ This guide provides more details for customizing the RAG chat app.
   - [Chat approach](#chat-approach)
 - [Improving answer quality](#improving-answer-quality)
   - [Identify the problem point](#identify-the-problem-point)
-  - [Improving OpenAI ChatCompletion results](#improving-openai-chatcompletion-results)
+  - [Improving OpenAI Responses API results](#improving-openai-responses-api-results)
   - [Improving Azure AI Search results](#improving-azure-ai-search-results)
   - [Evaluating answer quality](#evaluating-answer-quality)
 
@@ -34,9 +34,9 @@ Typically, the primary backend code you'll want to customize is the `app/backend
 
 The RAG flow is implemented in [chatreadretrieveread.py](https://github.com/Azure-Samples/azure-search-openai-demo/blob/main/app/backend/approaches/chatreadretrieveread.py).
 
-1. **Query rewriting**: It calls the OpenAI ChatCompletion API to turn the user question into a good search query, using the prompt from [query_rewrite.system.jinja2](https://github.com/Azure-Samples/azure-search-openai-demo/blob/main/app/backend/approaches/prompts/query_rewrite.system.jinja2) and tools from [chat_query_rewrite_tools.json](https://github.com/Azure-Samples/azure-search-openai-demo/blob/main/app/backend/approaches/prompts/chat_query_rewrite_tools.json).
+1. **Query rewriting**: It calls the OpenAI Responses API to turn the user question into a good search query, using the prompt from [query_rewrite.system.jinja2](https://github.com/Azure-Samples/azure-search-openai-demo/blob/main/app/backend/approaches/prompts/query_rewrite.system.jinja2) and tools from [chat_query_rewrite_tools.json](https://github.com/Azure-Samples/azure-search-openai-demo/blob/main/app/backend/approaches/prompts/chat_query_rewrite_tools.json).
 2. **Search**: It queries Azure AI Search for search results for that query (optionally using the vector embeddings for that query).
-3. **Answering**: It then calls the OpenAI ChatCompletion API to answer the question based on the sources, using the prompts from [chat_answer.system.jinja2](https://github.com/Azure-Samples/azure-search-openai-demo/blob/main/app/backend/approaches/prompts/chat_answer.system.jinja2) and [chat_answer.user.jinja2](https://github.com/Azure-Samples/azure-search-openai-demo/blob/main/app/backend/approaches/prompts/chat_answer.user.jinja2). That call includes the past message history as well (or as many messages fit inside the model's token limit).
+3. **Answering**: It then calls the OpenAI Responses API to answer the question based on the sources, using the prompts from [chat_answer.system.jinja2](https://github.com/Azure-Samples/azure-search-openai-demo/blob/main/app/backend/approaches/prompts/chat_answer.system.jinja2) and [chat_answer.user.jinja2](https://github.com/Azure-Samples/azure-search-openai-demo/blob/main/app/backend/approaches/prompts/chat_answer.user.jinja2). That call includes the past message history as well (or as many messages fit inside the model's token limit).
 
 The prompts are currently tailored to the sample data since they start with "Assistant helps the company employees with their healthcare plan questions, and questions about the employee handbook." Modify the [query_rewrite.system.jinja2](https://github.com/Azure-Samples/azure-search-openai-demo/blob/main/app/backend/approaches/prompts/query_rewrite.system.jinja2), [chat_answer.system.jinja2](https://github.com/Azure-Samples/azure-search-openai-demo/blob/main/app/backend/approaches/prompts/chat_answer.system.jinja2), and [chat_answer.user.jinja2](https://github.com/Azure-Samples/azure-search-openai-demo/blob/main/app/backend/approaches/prompts/chat_answer.user.jinja2) prompts to match your data.
 
@@ -88,20 +88,20 @@ If you notice any answers that aren't as good as you'd like, here's a process fo
 
 The first step is to identify where the problem is occurring. For example, if using the Chat tab, the problem could be:
 
-1. OpenAI ChatCompletion API is not generating a good search query based on the user question
+1. OpenAI Responses API is not generating a good search query based on the user question
 2. Azure AI Search is not returning good search results for the query
-3. OpenAI ChatCompletion API is not generating a good answer based on the search results and user question
+3. OpenAI Responses API is not generating a good answer based on the search results and user question
 
 You can look at the "Thought process" tab in the chat app to see each of those steps,
 and determine which one is the problem.
 
-### Improving OpenAI ChatCompletion results
+### Improving OpenAI Responses API results
 
-If the problem is with the ChatCompletion API calls (steps 1 or 3 above), you can try changing the relevant prompt.
+If the problem is with the Responses API calls (steps 1 or 3 above), you can try changing the relevant prompt.
 
-Once you've changed the prompt, make sure you ask the same question multiple times to see if the overall quality has improved, and [run an evaluation](#evaluating-answer-quality) when you're satisfied with the changes. The ChatCompletion API can yield different results every time, even for a temperature of 0.0, but especially for a higher temperature than that (like our default of 0.7 for step 3).
+Once you've changed the prompt, make sure you ask the same question multiple times to see if the overall quality has improved, and [run an evaluation](#evaluating-answer-quality) when you're satisfied with the changes. The Responses API can yield different results every time, even for a temperature of 0.0, but especially for a higher temperature than that (like our default of 0.3 for step 3).
 
-You can also try changing the ChatCompletion parameters, like temperature, to see if that improves results for your domain.
+You can also try changing the Responses API parameters, like temperature, to see if that improves results for your domain.
 
 ### Improving Azure AI Search results
 

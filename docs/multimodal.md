@@ -1,12 +1,12 @@
 # RAG chat: Support for multimodal documents
 
-This repository includes an optional feature that uses multimodal embedding models and multimodal chat completion models
+This repository includes an optional feature that uses multimodal embedding models and multimodal LLMs
 to better handle documents that contain images, such as financial reports with charts and graphs.
 
 With this feature enabled, the data ingestion process will extract images from your documents
 using Document Intelligence, store the images in Azure Blob Storage, vectorize the images using the Azure AI Vision service, and store the image embeddings in the Azure AI Search index.
 
-During the RAG flow, the app will perform a multi-vector query using both text and image embeddings, and then send any images associated with the retrieved document chunks to the chat completion model for answering questions. This feature assumes that your chat completion model supports multimodal inputs, such as `gpt-4o`, `gpt-4o-mini`, `gpt-5`, or `gpt-5-mini`.
+During the RAG flow, the app will perform a multi-vector query using both text and image embeddings, and then send any images associated with the retrieved document chunks to the LLM for answering questions. This feature assumes that the deployed model supports multimodal inputs, such as `gpt-4o`, `gpt-4o-mini`, `gpt-5`, or `gpt-5-mini`.
 
 With this feature enabled, the following changes are made:
 
@@ -17,7 +17,7 @@ With this feature enabled, the following changes are made:
 
 ## Prerequisites
 
-* The use of a chat completion model that supports multimodal inputs. The default model for the repository is currently `gpt-4.1-mini`, which does support multimodal inputs. The `gpt-4o-mini` technically supports multimodal inputs, but due to how image tokens are calculated, you need a much higher deployment capacity to use it effectively. Please try `gpt-4.1-mini` first, and experiment with other models later.
+* The use of a model that supports multimodal inputs. The default model for the repository is currently `gpt-4.1-mini`, which does support multimodal inputs. The `gpt-4o-mini` technically supports multimodal inputs, but due to how image tokens are calculated, you need a much higher deployment capacity to use it effectively. Please try `gpt-4.1-mini` first, and experiment with other models later.
 
 ## Deployment
 
@@ -92,7 +92,7 @@ Many developers may find that they can turn off image embeddings and still have 
 
 ### Control LLM input sources
 
-Set variables to control whether the chat completion model will use text inputs, image inputs, or both:
+Set variables to control whether the LLM will use text inputs, image inputs, or both:
 
 To disable text inputs, run:
 
