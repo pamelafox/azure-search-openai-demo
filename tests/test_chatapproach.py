@@ -603,9 +603,13 @@ async def test_run_with_streaming_handles_non_stream_response(chat_approach, mon
     ):
         events.append(event)
 
+    assert events[0]["type"] == "context"
     assert events[0]["context"] is extra_info
-    assert events[1]["delta"]["content"] == "Answer text"
+    assert events[1]["type"] == "delta"
+    assert events[1]["delta"] == "Answer text"
+    assert events[2]["type"] == "context"
     assert events[2]["context"] is extra_info
+    assert events[3]["type"] == "context"
     assert events[3]["context"]["followup_questions"] == ["Follow up?"]
 
 

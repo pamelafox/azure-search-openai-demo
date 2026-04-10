@@ -96,9 +96,6 @@
             }
         ]
     },
-    "message": {
-        "content": "The capital of France is Paris. [Benefit_Options-2.pdf].",
-        "role": "assistant"
-    },
+    "output_text": "The capital of France is Paris. [Benefit_Options-2.pdf].",
     "session_state": null
 }

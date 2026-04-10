@@ -83,16 +83,14 @@ export type ResponseContext = {
 };
 
 export type ChatAppResponseOrError = {
-    message: ResponseMessage;
-    delta: ResponseMessage;
+    output_text: string;
     context: ResponseContext;
     session_state: any;
     error?: string;
 };
 
 export type ChatAppResponse = {
-    message: ResponseMessage;
-    delta: ResponseMessage;
+    output_text: string;
     context: ResponseContext;
     session_state: any;
 };

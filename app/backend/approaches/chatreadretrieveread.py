@@ -123,14 +123,13 @@ class ChatReadRetrieveReadApproach(Approach):
         )
         response: Response = await cast(Awaitable[Response], response_coroutine)
         content = response.output_text
-        role = "assistant"
         if overrides.get("suggest_followup_questions"):
             content, followup_questions = self.extract_followup_questions(content)
             extra_info.followup_questions = followup_questions
         if self.include_token_usage and extra_info.thoughts and response.usage:
             extra_info.thoughts[-1].update_token_usage(response.usage)
         chat_app_response = {
-            "message": {"content": content, "role": role},
+            "output_text": content,
             "context": {
                 "thoughts": extra_info.thoughts,
                 "data_points": {
@@ -152,7 +151,7 @@ class ChatReadRetrieveReadApproach(Approach):
         extra_info, response_coroutine = await self.run_until_final_call(
             messages, overrides, auth_claims, should_stream=True
         )
-        yield {"delta": {"role": "assistant"}, "context": extra_info, "session_state": session_state}
+        yield {"type": "context", "context": extra_info, "session_state": session_state}
 
         followup_questions_started = False
         followup_content = ""
@@ -161,7 +160,6 @@ class ChatReadRetrieveReadApproach(Approach):
         # Handle non-streaming Response (e.g. when agentic retrieval already provided an answer)
         if isinstance(result, Response):
             content = result.output_text or ""
-            role = "assistant"
 
             followup_questions: list[str] = []
             if overrides.get("suggest_followup_questions"):
@@ -171,16 +169,14 @@ class ChatReadRetrieveReadApproach(Approach):
             if self.include_token_usage and extra_info.thoughts and result.usage:
                 extra_info.thoughts[-1].update_token_usage(result.usage)
 
-            delta_payload: dict[str, Any] = {"role": role}
             if content:
-                delta_payload["content"] = content
-            yield {"delta": delta_payload}
+                yield {"type": "delta", "delta": content}
 
-            yield {"delta": {"role": "assistant"}, "context": extra_info, "session_state": session_state}
+            yield {"type": "context", "context": extra_info, "session_state": session_state}
 
             if followup_questions:
                 yield {
-                    "delta": {"role": "assistant"},
+                    "type": "context",
                     "context": {"context": extra_info, "followup_questions": followup_questions},
                 }
             return
@@ -191,32 +187,25 @@ class ChatReadRetrieveReadApproach(Approach):
         async for event in stream:
             if isinstance(event, ResponseTextDeltaEvent):
                 delta_content: str = event.delta or ""
-                completion = {
-                    "delta": {
-                        "content": delta_content,
-                        "role": "assistant",
-                    }
-                }
                 if overrides.get("suggest_followup_questions") and "<<" in delta_content:
                     followup_questions_started = True
                     earlier_content = delta_content[: delta_content.index("<<")]
                     if earlier_content:
-                        completion["delta"]["content"] = earlier_content
-                        yield completion
+                        yield {"type": "delta", "delta": earlier_content}
                     followup_content += delta_content[delta_content.index("<<") :]
                 elif followup_questions_started:
                     followup_content += delta_content
                 else:
-                    yield completion
+                    yield {"type": "delta", "delta": delta_content}
             elif isinstance(event, ResponseCompletedEvent):
                 if event.response.usage and extra_info.thoughts and self.include_token_usage:
                     extra_info.thoughts[-1].update_token_usage(event.response.usage)
-                    yield {"delta": {"role": "assistant"}, "context": extra_info, "session_state": session_state}
+                    yield {"type": "context", "context": extra_info, "session_state": session_state}
 
         if followup_content:
             _, followup_questions = self.extract_followup_questions(followup_content)
             yield {
-                "delta": {"role": "assistant"},
+                "type": "context",
                 "context": {"context": extra_info, "followup_questions": followup_questions},
             }
 

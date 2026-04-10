@@ -32,7 +32,7 @@ type HtmlParsedAnswer = {
 const isWebCitation = (reference: string) => reference.startsWith("http://") || reference.startsWith("https://");
 
 const normalizeAnswerText = (answer: ChatAppResponse, isStreaming: boolean): string => {
-    let parsedAnswer = answer.message.content.trim();
+    let parsedAnswer = answer.output_text.trim();
 
     if (isStreaming) {
         let lastIndex = parsedAnswer.length;
