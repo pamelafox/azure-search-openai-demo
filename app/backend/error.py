@@ -1,4 +1,5 @@
 import logging
+from typing import Any, cast
 
 from azure.core.exceptions import HttpResponseError
 from openai import APIError
@@ -16,7 +17,8 @@ ERROR_MESSAGE_LENGTH = """Your message exceeded the context length limit for thi
 def get_openai_error_code(error: APIError) -> str | None:
     """Extract the error code from an OpenAI API error body."""
     if error.body and isinstance(error.body, dict):
-        return error.body.get("code")
+        body = cast(dict[str, Any], error.body)
+        return body.get("code")
     return None
 
 
