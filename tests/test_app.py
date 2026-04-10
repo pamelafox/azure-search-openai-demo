@@ -20,11 +20,12 @@ def fake_response(http_code):
 filtered_response = BadRequestError(
     message="The response was filtered",
     body={
-        "message": "The response was filtered",
-        "type": None,
-        "param": "prompt",
-        "code": "content_filter",
-        "status": 400,
+        "error": {
+            "message": "The response was filtered",
+            "type": "invalid_request_error",
+            "param": "prompt",
+            "code": "content_filter",
+        }
     },
     response=Response(
         400, request=Request(method="get", url="https://foo.bar/"), json={"error": {"code": "content_filter"}}
@@ -34,9 +35,10 @@ filtered_response = BadRequestError(
 contextlength_response = BadRequestError(
     message="This model's maximum context length is 4096 tokens. However, your messages resulted in 5069 tokens. Please reduce the length of the messages.",
     body={
-        "message": "This model's maximum context length is 4096 tokens. However, your messages resulted in 5069 tokens. Please reduce the length of the messages.",
-        "code": "context_length_exceeded",
-        "status": 400,
+        "error": {
+            "message": "This model's maximum context length is 4096 tokens.",
+            "code": "context_length_exceeded",
+        }
     },
     response=Response(400, request=Request(method="get", url="https://foo.bar/"), json={"error": {"code": "429"}}),
 )
