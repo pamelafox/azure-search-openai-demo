@@ -222,9 +222,9 @@ param chatGptDeploymentSkuName string = ''
 param chatGptDeploymentCapacity int = 0
 
 var chatGpt = {
-  modelName: !empty(chatGptModelName) ? chatGptModelName : 'gpt-4.1-mini'
-  deploymentName: !empty(chatGptDeploymentName) ? chatGptDeploymentName : 'gpt-4.1-mini'
-  deploymentVersion: !empty(chatGptDeploymentVersion) ? chatGptDeploymentVersion : '2025-04-14'
+  modelName: !empty(chatGptModelName) ? chatGptModelName : 'gpt-5.4'
+  deploymentName: !empty(chatGptDeploymentName) ? chatGptDeploymentName : 'gpt-5.4'
+  deploymentVersion: !empty(chatGptDeploymentVersion) ? chatGptDeploymentVersion : '2026-03-05'
   deploymentSkuName: !empty(chatGptDeploymentSkuName) ? chatGptDeploymentSkuName : 'GlobalStandard'
   deploymentCapacity: chatGptDeploymentCapacity != 0 ? chatGptDeploymentCapacity : 30
 }
@@ -263,9 +263,9 @@ param knowledgeBaseModelVersion string = ''
 param knowledgeBaseDeploymentSkuName string = ''
 param knowledgeBaseDeploymentCapacity int = 0
 var knowledgeBase = {
-  modelName: !empty(knowledgeBaseModelName) ? knowledgeBaseModelName : 'gpt-4.1-mini'
+  modelName: !empty(knowledgeBaseModelName) ? knowledgeBaseModelName : 'gpt-5.4'
   deploymentName: !empty(knowledgeBaseDeploymentName) ? knowledgeBaseDeploymentName : 'knowledgebase'
-  deploymentVersion: !empty(knowledgeBaseModelVersion) ? knowledgeBaseModelVersion : '2025-04-14'
+  deploymentVersion: !empty(knowledgeBaseModelVersion) ? knowledgeBaseModelVersion : '2026-03-05'
   deploymentSkuName: !empty(knowledgeBaseDeploymentSkuName) ? knowledgeBaseDeploymentSkuName : 'GlobalStandard'
   deploymentCapacity: knowledgeBaseDeploymentCapacity != 0 ? knowledgeBaseDeploymentCapacity : 100
 }
