@@ -173,12 +173,6 @@ class ChatReadRetrieveReadApproach(Approach):
                 yield {"type": "response.output_text.delta", "delta": content}
 
             yield {"type": "response.context", "context": extra_info, "session_state": session_state}
-
-            if followup_questions:
-                yield {
-                    "type": "response.context",
-                    "context": {"context": extra_info, "followup_questions": followup_questions},
-                }
             return
 
         # Handle streaming Response events
@@ -204,10 +198,8 @@ class ChatReadRetrieveReadApproach(Approach):
 
         if followup_content:
             _, followup_questions = self.extract_followup_questions(followup_content)
-            yield {
-                "type": "response.context",
-                "context": {"context": extra_info, "followup_questions": followup_questions},
-            }
+            extra_info.followup_questions = followup_questions
+            yield {"type": "response.context", "context": extra_info, "session_state": session_state}
 
     async def run(
         self,

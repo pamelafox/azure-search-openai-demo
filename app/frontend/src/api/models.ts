@@ -83,9 +83,9 @@ export type ResponseContext = {
 };
 
 export type ChatAppResponseOrError = {
-    output_text: string;
-    context: ResponseContext;
-    session_state: any;
+    output_text?: string;
+    context?: ResponseContext;
+    session_state?: any;
     error?: string;
 };
 

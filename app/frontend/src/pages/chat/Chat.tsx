@@ -186,7 +186,7 @@ const Chat = () => {
                 }
                 if (event["type"] === "response.context" && event["context"] && event["context"]["data_points"]) {
                     askResponse = { ...askResponse, context: event["context"], session_state: event["session_state"] };
-                } else if (event["type"] === "response.output_text.delta" && event["delta"]) {
+                } else if (event["type"] === "response.output_text.delta" && event["delta"] !== undefined) {
                     setIsLoading(false);
                     await updateState(event["delta"]);
                 } else if (event["type"] === "response.context" && event["context"]) {
