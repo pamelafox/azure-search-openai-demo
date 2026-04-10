@@ -151,7 +151,7 @@ class ChatReadRetrieveReadApproach(Approach):
         extra_info, response_coroutine = await self.run_until_final_call(
             messages, overrides, auth_claims, should_stream=True
         )
-        yield {"type": "context", "context": extra_info, "session_state": session_state}
+        yield {"type": "response.context", "context": extra_info, "session_state": session_state}
 
         followup_questions_started = False
         followup_content = ""
@@ -170,13 +170,13 @@ class ChatReadRetrieveReadApproach(Approach):
                 extra_info.thoughts[-1].update_token_usage(result.usage)
 
             if content:
-                yield {"type": "delta", "delta": content}
+                yield {"type": "response.output_text.delta", "delta": content}
 
-            yield {"type": "context", "context": extra_info, "session_state": session_state}
+            yield {"type": "response.context", "context": extra_info, "session_state": session_state}
 
             if followup_questions:
                 yield {
-                    "type": "context",
+                    "type": "response.context",
                     "context": {"context": extra_info, "followup_questions": followup_questions},
                 }
             return
@@ -191,21 +191,21 @@ class ChatReadRetrieveReadApproach(Approach):
                     followup_questions_started = True
                     earlier_content = delta_content[: delta_content.index("<<")]
                     if earlier_content:
-                        yield {"type": "delta", "delta": earlier_content}
+                        yield {"type": "response.output_text.delta", "delta": earlier_content}
                     followup_content += delta_content[delta_content.index("<<") :]
                 elif followup_questions_started:
                     followup_content += delta_content
                 else:
-                    yield {"type": "delta", "delta": delta_content}
+                    yield {"type": "response.output_text.delta", "delta": delta_content}
             elif isinstance(event, ResponseCompletedEvent):
                 if event.response.usage and extra_info.thoughts and self.include_token_usage:
                     extra_info.thoughts[-1].update_token_usage(event.response.usage)
-                    yield {"type": "context", "context": extra_info, "session_state": session_state}
+                    yield {"type": "response.context", "context": extra_info, "session_state": session_state}
 
         if followup_content:
             _, followup_questions = self.extract_followup_questions(followup_content)
             yield {
-                "type": "context",
+                "type": "response.context",
                 "context": {"context": extra_info, "followup_questions": followup_questions},
             }
 
