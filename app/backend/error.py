@@ -15,8 +15,8 @@ ERROR_MESSAGE_LENGTH = """Your message exceeded the context length limit for thi
 
 def get_openai_error_code(error: APIError) -> str | None:
     """Extract the error code from an OpenAI API error body."""
-    if isinstance(error.body, dict):
-        return error.body.get("error", {}).get("code")
+    if error.body and isinstance(error.body, dict):
+        return error.body.get("code")
     return None
 
 
@@ -24,6 +24,7 @@ def is_content_filter_error(error: Exception) -> bool:
     """Check if an error is a content filter error from OpenAI or Azure Search."""
     if isinstance(error, APIError) and get_openai_error_code(error) == "content_filter":
         return True
+    # AI Search Agentic KB returns "The response was filtered due to the prompt triggering Azure OpenAI's content management policy."
     if isinstance(error, HttpResponseError) and "content management policy" in str(error):
         return True
     return False
