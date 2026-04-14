@@ -38,7 +38,7 @@ As of April 2026, the default chat model is `gpt-5.4`. If you deployed this samp
     azd env set AZURE_OPENAI_CHATGPT_DEPLOYMENT gpt-5-chat
     ```
 
-1. To set the GPT model to a different [available model](https://learn.microsoft.com/azure/ai-services/openai/concepts/models), run this command with the appropriate model name. For reasoning models like gpt-5/o3/o4, check [the reasoning guide](./reasoning.md)
+1. To set the GPT model to a different [available model](https://learn.microsoft.com/azure/ai-services/openai/concepts/models), run this command with the appropriate model name. A few examples are below.
 
    For gpt-5.4 (default):
 
@@ -46,89 +46,29 @@ As of April 2026, the default chat model is `gpt-5.4`. If you deployed this samp
    azd env set AZURE_OPENAI_CHATGPT_MODEL gpt-5.4
    ```
 
-   For gpt-5-chat:
+   For gpt-5.2:
 
    ```shell
-   azd env set AZURE_OPENAI_CHATGPT_MODEL gpt-5-chat
+   azd env set AZURE_OPENAI_CHATGPT_MODEL gpt-5.2
    ```
-
-    For gpt-4.1-mini:
-
-    ```bash
-    azd env set AZURE_OPENAI_CHATGPT_MODEL gpt-4.1-mini
-    ```
-
-    For gpt-4o:
-
-    ```bash
-    azd env set AZURE_OPENAI_CHATGPT_MODEL gpt-4o
-    ```
-
-    For gpt-4o mini:
-
-    ```bash
-    azd env set AZURE_OPENAI_CHATGPT_MODEL gpt-4o-mini
-    ```
-
-    For gpt-4:
-
-    ```bash
-    azd env set AZURE_OPENAI_CHATGPT_MODEL gpt-4
-    ```
-
-    For gpt-3.5-turbo:
-
-    ```bash
-    azd env set AZURE_OPENAI_CHATGPT_MODEL gpt-35-turbo
-    ```
 
 1. To set the Azure OpenAI model version from the [available versions](https://learn.microsoft.com/azure/ai-services/openai/concepts/models), run this command with the appropriate version string.
 
-   For gpt-5.4:
+   For gpt-5.4 (default)
 
    ```shell
    azd env set AZURE_OPENAI_CHATGPT_DEPLOYMENT_VERSION 2026-03-05
    ```
 
-   For gpt-5-chat:
+   For gpt-5.2:
 
    ```shell
-   azd env set AZURE_OPENAI_CHATGPT_DEPLOYMENT_VERSION 2025-08-07
+   azd env set AZURE_OPENAI_CHATGPT_DEPLOYMENT_VERSION 2025-12-11
    ```
-
-    For gpt-4.1-mini:
-
-    ```bash
-    azd env set AZURE_OPENAI_CHATGPT_DEPLOYMENT_VERSION 2025-04-14
-    ```
-
-    For gpt-4o:
-
-    ```bash
-    azd env set AZURE_OPENAI_CHATGPT_DEPLOYMENT_VERSION 2024-05-13
-    ```
-
-    For gpt-4o mini:
-
-    ```bash
-    azd env set AZURE_OPENAI_CHATGPT_DEPLOYMENT_VERSION 2024-07-18
-    ```
-
-    For gpt-4:
-
-    ```bash
-    azd env set AZURE_OPENAI_CHATGPT_DEPLOYMENT_VERSION turbo-2024-04-09
-    ```
-
-    For gpt-3.5-turbo:
-
-    ```bash
-    azd env set AZURE_OPENAI_CHATGPT_DEPLOYMENT_VERSION 0125
-    ```
 
 1. To set the Azure OpenAI deployment SKU name, run this command with [the desired SKU name](https://learn.microsoft.com/azure/ai-foundry/foundry-models/concepts/deployment-types).
 
-    For GlobalStandard:
+    For GlobalStandard (default):
 
     ```bash
     azd env set AZURE_OPENAI_CHATGPT_DEPLOYMENT_SKU GlobalStandard
@@ -159,8 +99,8 @@ This process does *not* delete your previous model deployment. If you want to de
 
 ## Using reasoning models
 
-This feature allows you to use reasoning models to generate responses based on retrieved content. These models spend more time processing and understanding the user's request.
-To enable reasoning models, follow the steps in [the reasoning models guide](./reasoning.md).
+The default model (gpt-5.4) is a reasoning model. These models spend more time processing and understanding the user's request, leading to higher quality responses.
+To learn more about supported reasoning models and configuring reasoning effort, see [the reasoning models guide](./reasoning.md).
 
 ## Using agentic retrieval
 
