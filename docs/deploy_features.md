@@ -35,7 +35,7 @@ As of April 2026, the default chat model is `gpt-5.4`. If you deployed this samp
     For example:
 
     ```bash
-    azd env set AZURE_OPENAI_CHATGPT_DEPLOYMENT gpt-5-chat
+    azd env set AZURE_OPENAI_CHATGPT_DEPLOYMENT gpt-5.4
     ```
 
 1. To set the GPT model to a different [available model](https://learn.microsoft.com/azure/ai-services/openai/concepts/models), run this command with the appropriate model name. A few examples are below.
