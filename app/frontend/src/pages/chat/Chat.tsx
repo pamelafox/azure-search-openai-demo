@@ -160,8 +160,7 @@ const Chat = () => {
     const handleAsyncRequest = async (question: string, answers: [string, ChatAppResponse][], responseBody: ReadableStream<any>, signal: AbortSignal) => {
         let answer: string = "";
         let askResponse: ChatAppResponse = {
-            message: { content: "", role: "assistant" },
-            delta: { content: "", role: "assistant" },
+            output_text: "",
             context: { data_points: { text: [], images: [], citations: [] }, thoughts: [], followup_questions: null },
             session_state: null
         };
@@ -172,7 +171,7 @@ const Chat = () => {
                     answer += newContent;
                     const latestResponse: ChatAppResponse = {
                         ...askResponse,
-                        message: { content: answer, role: askResponse.message.role }
+                        output_text: answer
                     };
                     setStreamedAnswers([...answers, [question, latestResponse]]);
                     resolve(null);
@@ -185,13 +184,12 @@ const Chat = () => {
                 if (signal.aborted) {
                     break;
                 }
-                if (event["context"] && event["context"]["data_points"]) {
-                    event["message"] = event["delta"];
-                    askResponse = event as ChatAppResponse;
-                } else if (event["delta"] && event["delta"]["content"]) {
+                if (event["type"] === "response.context" && event["context"] && event["context"]["data_points"]) {
+                    askResponse = { ...askResponse, context: event["context"], session_state: event["session_state"] };
+                } else if (event["type"] === "response.output_text.delta" && event["delta"] !== undefined) {
                     setIsLoading(false);
-                    await updateState(event["delta"]["content"]);
-                } else if (event["context"]) {
+                    await updateState(event["delta"]);
+                } else if (event["type"] === "response.context" && event["context"]) {
                     // Update context with new keys from latest event
                     askResponse.context = { ...askResponse.context, ...event["context"] };
                 } else if (event["error"]) {
@@ -210,7 +208,7 @@ const Chat = () => {
         }
         const fullResponse: ChatAppResponse = {
             ...askResponse,
-            message: { content: answer, role: askResponse.message.role }
+            output_text: answer
         };
         return fullResponse;
     };
@@ -271,7 +269,7 @@ const Chat = () => {
         try {
             const messages: ResponseMessage[] = answers.flatMap(a => [
                 { content: a[0], role: "user" },
-                { content: a[1].message.content, role: "assistant" }
+                { content: a[1].output_text, role: "assistant" }
             ]);
 
             const request: ChatAppRequest = {
@@ -311,12 +309,13 @@ const Chat = () => {
                 throw Error("No response body");
             }
             if (response.status > 299 || !response.ok) {
-                throw Error(`Request failed with status ${response.status}`);
+                const errorBody = await response.json().catch(() => null);
+                throw Error(errorBody?.error || `Request failed with status ${response.status}`);
             }
             if (shouldStream) {
                 const parsedResponse: ChatAppResponse = await handleAsyncRequest(question, answers, response.body, controller.signal);
                 // Only add to answers if we got content, otherwise restore question to input
-                if (parsedResponse.message.content) {
+                if (parsedResponse.output_text) {
                     setAnswers([...answers, [question, parsedResponse]]);
                     if (typeof parsedResponse.session_state === "string" && parsedResponse.session_state !== "") {
                         const token = client ? await getToken(client) : undefined;

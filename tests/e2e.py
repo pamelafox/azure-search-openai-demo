@@ -209,7 +209,7 @@ def test_chat_stop_restores_question(page: Page, live_server_url: str):
     def handle(route: Route):
         # Return a valid but empty NDJSON stream - this simulates stopping before content arrives
         # Need at least one event with context/data_points to initialize, but no delta content
-        jsonl = '{"context": {"data_points": {"text": []}, "thoughts": []}, "delta": {"role": "assistant"}}\n'
+        jsonl = '{"type": "response.context", "context": {"data_points": {"text": []}, "thoughts": []}, "session_state": null}\n'
         route.fulfill(
             status=200,
             headers={"Transfer-encoding": "Chunked", "Content-Type": "application/x-ndjson"},

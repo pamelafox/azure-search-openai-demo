@@ -603,10 +603,13 @@ async def test_run_with_streaming_handles_non_stream_response(chat_approach, mon
     ):
         events.append(event)
 
+    assert events[0]["type"] == "response.context"
     assert events[0]["context"] is extra_info
-    assert events[1]["delta"]["content"] == "Answer text"
+    assert events[1]["type"] == "response.output_text.delta"
+    assert events[1]["delta"] == "Answer text"
+    assert events[2]["type"] == "response.context"
     assert events[2]["context"] is extra_info
-    assert events[3]["context"]["followup_questions"] == ["Follow up?"]
+    assert extra_info.followup_questions == ["Follow up?"]
 
 
 @pytest.mark.asyncio

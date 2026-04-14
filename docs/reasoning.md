@@ -103,7 +103,7 @@ This repository includes an optional feature that uses reasoning models to gener
 
 4. **Try out the feature:**
 
-   Open the web app and start a new chat. The reasoning model will be used for all chat completion requests, including the query rewriting step.
+   Open the web app and start a new chat. The reasoning model will be used for all Responses API requests, including the query rewriting step.
 
 5. **Experiment with reasoning effort:**
 
@@ -114,6 +114,6 @@ This repository includes an optional feature that uses reasoning models to gener
 6. **Understand token usage:**
 
    The reasoning models use additional billed tokens behind the scenes for the thinking process.
-   To see the token usage, select the lightbulb icon on a chat answer. This will open the "Thought process" tab, which shows the reasoning model's thought process and the token usage for each chat completion.
+   To see the token usage, select the lightbulb icon on a chat answer. This will open the "Thought process" tab, which shows the reasoning model's thought process and the token usage for each response.
 
    ![Thought process token usage](./images/token-usage.png)
