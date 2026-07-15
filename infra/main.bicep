@@ -270,9 +270,9 @@ param knowledgeBaseModelVersion string = ''
 param knowledgeBaseDeploymentSkuName string = ''
 param knowledgeBaseDeploymentCapacity int = 0
 var knowledgeBase = {
-  modelName: !empty(knowledgeBaseModelName) ? knowledgeBaseModelName : 'gpt-4.1-mini'
+  modelName: !empty(knowledgeBaseModelName) ? knowledgeBaseModelName : 'gpt-5.4'
   deploymentName: !empty(knowledgeBaseDeploymentName) ? knowledgeBaseDeploymentName : 'knowledgebase'
-  deploymentVersion: !empty(knowledgeBaseModelVersion) ? knowledgeBaseModelVersion : '2025-04-14'
+  deploymentVersion: !empty(knowledgeBaseModelVersion) ? knowledgeBaseModelVersion : '2026-03-05'
   deploymentSkuName: !empty(knowledgeBaseDeploymentSkuName) ? knowledgeBaseDeploymentSkuName : 'GlobalStandard'
   deploymentCapacity: knowledgeBaseDeploymentCapacity != 0 ? knowledgeBaseDeploymentCapacity : 100
 }
@@ -525,8 +525,8 @@ var appEnvVariables = {
   AZURE_OPENAI_SERVICE: deployFoundryAccount ? foundryAccount!.outputs.name : ''
   AZURE_OPENAI_CHATGPT_DEPLOYMENT: chatGpt.deploymentName
   AZURE_OPENAI_EMB_DEPLOYMENT: embedding.deploymentName
-  AZURE_OPENAI_knowledgeBase_MODEL: knowledgeBase.modelName
-  AZURE_OPENAI_knowledgeBase_DEPLOYMENT: knowledgeBase.deploymentName
+  AZURE_OPENAI_KNOWLEDGEBASE_MODEL: knowledgeBase.modelName
+  AZURE_OPENAI_KNOWLEDGEBASE_DEPLOYMENT: knowledgeBase.deploymentName
   AZURE_OPENAI_API_KEY_OVERRIDE: azureOpenAiApiKey
   AZURE_OPENAI_CUSTOM_URL: azureOpenAiCustomUrl
   // Used only with non-Azure OpenAI deployments
