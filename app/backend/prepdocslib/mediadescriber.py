@@ -27,18 +27,16 @@ class MediaDescriber(ABC):
 
 
 class ContentUnderstandingDescriber(MediaDescriber):
-    CU_API_VERSION = "2024-12-01-preview"
+    CU_API_VERSION = "2025-11-01"
+    ANALYZER_ID = "image_analyzer"
 
     analyzer_schema = {
-        "analyzerId": "image_analyzer",
-        "name": "Image understanding",
         "description": "Extract detailed structured information from images extracted from documents.",
         "baseAnalyzerId": "prebuilt-image",
-        "scenario": "image",
         "config": {"returnDetails": False},
         "fieldSchema": {
             "name": "ImageInformation",
-            "descriptions": "Description of image.",
+            "description": "Description of image.",
             "fields": {
                 "Description": {
                     "type": "string",
@@ -68,22 +66,21 @@ class ContentUnderstandingDescriber(MediaDescriber):
         return await poll()
 
     async def create_analyzer(self):
-        logger.info("Creating analyzer '%s'...", self.analyzer_schema["analyzerId"])
+        logger.info("Creating analyzer '%s'...", self.ANALYZER_ID)
 
         token_provider = get_bearer_token_provider(self.credential, "https://cognitiveservices.azure.com/.default")
         token = await token_provider()
         headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
         params = {"api-version": self.CU_API_VERSION}
-        analyzer_id = self.analyzer_schema["analyzerId"]
-        cu_endpoint = f"{self.endpoint}/contentunderstanding/analyzers/{analyzer_id}"
+        cu_endpoint = f"{self.endpoint}/contentunderstanding/analyzers/{self.ANALYZER_ID}"
         async with aiohttp.ClientSession() as session:
             async with session.put(
                 url=cu_endpoint, params=params, headers=headers, json=self.analyzer_schema
             ) as response:
                 if response.status == 409:
-                    logger.info("Analyzer '%s' already exists.", analyzer_id)
+                    logger.info("Analyzer '%s' already exists.", self.ANALYZER_ID)
                     return
-                elif response.status != 201:
+                elif response.status not in (200, 201):
                     data = await response.text()
                     raise Exception("Error creating analyzer", data)
                 else:
@@ -98,9 +95,8 @@ class ContentUnderstandingDescriber(MediaDescriber):
             token = await self.credential.get_token("https://cognitiveservices.azure.com/.default")
             headers = {"Authorization": "Bearer " + token.token}
             params = {"api-version": self.CU_API_VERSION}
-            analyzer_name = self.analyzer_schema["analyzerId"]
             async with session.post(
-                url=f"{self.endpoint}/contentunderstanding/analyzers/{analyzer_name}:analyze",
+                url=f"{self.endpoint}/contentunderstanding/analyzers/{self.ANALYZER_ID}:analyze",
                 params=params,
                 headers=headers,
                 data=image_bytes,

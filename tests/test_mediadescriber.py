@@ -25,14 +25,15 @@ async def test_contentunderstanding_analyze(monkeypatch, caplog):
             return MockResponse(
                 status=200,
                 headers={
-                    "Operation-Location": "https://testcontentunderstanding.cognitiveservices.azure.com/contentunderstanding/analyzers/badanalyzer/operations/7f313e00-4da1-4b19-a25e-53f121c24d10?api-version=2024-12-01-preview"
+                    "Operation-Location": "https://testcontentunderstanding.cognitiveservices.azure.com/contentunderstanding/analyzers/badanalyzer/operations/7f313e00-4da1-4b19-a25e-53f121c24d10?api-version=2025-11-01"
                 },
             )
         if kwargs.get("url").endswith("contentunderstanding/analyzers/image_analyzer:analyze"):
+            assert kwargs["params"] == {"api-version": "2025-11-01"}
             return MockResponse(
                 status=200,
                 headers={
-                    "Operation-Location": "https://testcontentunderstanding.cognitiveservices.azure.com/contentunderstanding/analyzers/image_analyzer/results/53e4c016-d2c0-48a9-a9f4-38891f7d45f0?api-version=2024-12-01-preview"
+                    "Operation-Location": "https://testcontentunderstanding.cognitiveservices.azure.com/contentunderstanding/analyzers/image_analyzer/results/53e4c016-d2c0-48a9-a9f4-38891f7d45f0?api-version=2025-11-01"
                 },
             )
         else:
@@ -44,7 +45,7 @@ async def test_contentunderstanding_analyze(monkeypatch, caplog):
 
     def mock_get(self, url, **kwargs):
         if url.endswith(
-            "contentunderstanding/analyzers/image_analyzer/results/53e4c016-d2c0-48a9-a9f4-38891f7d45f0?api-version=2024-12-01-preview"
+            "contentunderstanding/analyzers/image_analyzer/results/53e4c016-d2c0-48a9-a9f4-38891f7d45f0?api-version=2025-11-01"
         ):
             return MockResponse(
                 status=200,
@@ -54,7 +55,7 @@ async def test_contentunderstanding_analyze(monkeypatch, caplog):
                         "status": "Succeeded",
                         "result": {
                             "analyzerId": "image_analyzer",
-                            "apiVersion": "2024-12-01-preview",
+                            "apiVersion": "2025-11-01",
                             "createdAt": "2024-12-05T17:33:04Z",
                             "warnings": [],
                             "contents": [
@@ -78,11 +79,11 @@ async def test_contentunderstanding_analyze(monkeypatch, caplog):
                 ),
             )
         elif url.endswith(
-            "https://testcontentunderstanding.cognitiveservices.azure.com/contentunderstanding/analyzers/badanalyzer/operations/7f313e00-4da1-4b19-a25e-53f121c24d10?api-version=2024-12-01-preview"
+            "https://testcontentunderstanding.cognitiveservices.azure.com/contentunderstanding/analyzers/badanalyzer/operations/7f313e00-4da1-4b19-a25e-53f121c24d10?api-version=2025-11-01"
         ):
             return MockResponse(status=200, text=json.dumps({"status": "Failed"}))
         elif url.endswith(
-            "https://testcontentunderstanding.cognitiveservices.azure.com/contentunderstanding/analyzers/image_analyzer/operations/7f313e00-4da1-4b19-a25e-53f121c24d10?api-version=2024-12-01-preview"
+            "https://testcontentunderstanding.cognitiveservices.azure.com/contentunderstanding/analyzers/image_analyzer/operations/7f313e00-4da1-4b19-a25e-53f121c24d10?api-version=2025-11-01"
         ):
             nonlocal num_poll_calls
             num_poll_calls += 1
@@ -98,6 +99,19 @@ async def test_contentunderstanding_analyze(monkeypatch, caplog):
     def mock_put(self, *args, **kwargs):
         if kwargs.get("url").find("existinganalyzer") > 0:
             return MockResponse(status=409)
+        assert kwargs["params"] == {"api-version": "2025-11-01"}
+        assert kwargs["json"] == ContentUnderstandingDescriber.analyzer_schema
+        assert "analyzerId" not in kwargs["json"]
+        assert "name" not in kwargs["json"]
+        assert "scenario" not in kwargs["json"]
+        assert kwargs["json"]["fieldSchema"]["description"] == "Description of image."
+        if kwargs.get("url").find("updatedanalyzer") > 0:
+            return MockResponse(
+                status=200,
+                headers={
+                    "Operation-Location": "https://testcontentunderstanding.cognitiveservices.azure.com/contentunderstanding/analyzers/image_analyzer/operations/7f313e00-4da1-4b19-a25e-53f121c24d10?api-version=2025-11-01"
+                },
+            )
         if kwargs.get("url").find("wrongservicename") > 0:
             return MockResponse(
                 status=404,
@@ -109,7 +123,7 @@ async def test_contentunderstanding_analyze(monkeypatch, caplog):
             return MockResponse(
                 status=201,
                 headers={
-                    "Operation-Location": "https://testcontentunderstanding.cognitiveservices.azure.com/contentunderstanding/analyzers/image_analyzer/operations/7f313e00-4da1-4b19-a25e-53f121c24d10?api-version=2024-12-01-preview"
+                    "Operation-Location": "https://testcontentunderstanding.cognitiveservices.azure.com/contentunderstanding/analyzers/image_analyzer/operations/7f313e00-4da1-4b19-a25e-53f121c24d10?api-version=2025-11-01"
                 },
             )
         else:
@@ -122,6 +136,11 @@ async def test_contentunderstanding_analyze(monkeypatch, caplog):
     )
     await describer.create_analyzer()
     await describer.describe_image(b"imagebytes")
+
+    describer_updated_analyzer = ContentUnderstandingDescriber(
+        endpoint="https://updatedanalyzer.cognitiveservices.azure.com", credential=MockAzureCredential()
+    )
+    await describer_updated_analyzer.create_analyzer()
 
     describer_wrong_endpoint = ContentUnderstandingDescriber(
         endpoint="https://wrongservicename.cognitiveservices.azure.com", credential=MockAzureCredential()
