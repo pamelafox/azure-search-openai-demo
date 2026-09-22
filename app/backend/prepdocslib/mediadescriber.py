@@ -57,10 +57,11 @@ class ContentUnderstandingDescriber(MediaDescriber):
             async with session.get(poll_url, headers=headers) as response:
                 response.raise_for_status()
                 response_json = await response.json()
-                if response_json["status"] == "Failed":
-                    raise Exception("Failed")
-                if response_json["status"] == "Running":
-                    raise ValueError("Running")
+                status = response_json["status"]
+                if status in ("Failed", "Canceled"):
+                    raise Exception(status)
+                if status in ("NotStarted", "Running"):
+                    raise ValueError(status)
                 return response_json
 
         return await poll()
@@ -96,7 +97,7 @@ class ContentUnderstandingDescriber(MediaDescriber):
             headers = {"Authorization": "Bearer " + token.token}
             params = {"api-version": self.CU_API_VERSION}
             async with session.post(
-                url=f"{self.endpoint}/contentunderstanding/analyzers/{self.ANALYZER_ID}:analyze",
+                url=f"{self.endpoint}/contentunderstanding/analyzers/{self.ANALYZER_ID}:analyzeBinary",
                 params=params,
                 headers=headers,
                 data=image_bytes,

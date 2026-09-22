@@ -28,10 +28,18 @@ async def test_contentunderstanding_analyze(monkeypatch, caplog):
                     "Operation-Location": "https://testcontentunderstanding.cognitiveservices.azure.com/contentunderstanding/analyzers/badanalyzer/operations/7f313e00-4da1-4b19-a25e-53f121c24d10?api-version=2025-11-01"
                 },
             )
-        if kwargs.get("url").endswith("contentunderstanding/analyzers/image_analyzer:analyze"):
-            assert kwargs["params"] == {"api-version": "2025-11-01"}
+        if kwargs.get("url").find("canceledanalyzer") > 0:
             return MockResponse(
-                status=200,
+                status=202,
+                headers={
+                    "Operation-Location": "https://testcontentunderstanding.cognitiveservices.azure.com/contentunderstanding/analyzers/canceledanalyzer/operations/7f313e00-4da1-4b19-a25e-53f121c24d10?api-version=2025-11-01"
+                },
+            )
+        if kwargs.get("url").endswith("contentunderstanding/analyzers/image_analyzer:analyzeBinary"):
+            assert kwargs["params"] == {"api-version": "2025-11-01"}
+            assert kwargs["data"] == b"imagebytes"
+            return MockResponse(
+                status=202,
                 headers={
                     "Operation-Location": "https://testcontentunderstanding.cognitiveservices.azure.com/contentunderstanding/analyzers/image_analyzer/results/53e4c016-d2c0-48a9-a9f4-38891f7d45f0?api-version=2025-11-01"
                 },
@@ -47,6 +55,12 @@ async def test_contentunderstanding_analyze(monkeypatch, caplog):
         if url.endswith(
             "contentunderstanding/analyzers/image_analyzer/results/53e4c016-d2c0-48a9-a9f4-38891f7d45f0?api-version=2025-11-01"
         ):
+            nonlocal num_poll_calls
+            num_poll_calls += 1
+            if num_poll_calls == 1:
+                return MockResponse(status=200, text=json.dumps({"status": "NotStarted"}))
+            if num_poll_calls == 2:
+                return MockResponse(status=200, text=json.dumps({"status": "Running"}))
             return MockResponse(
                 status=200,
                 text=json.dumps(
@@ -83,14 +97,18 @@ async def test_contentunderstanding_analyze(monkeypatch, caplog):
         ):
             return MockResponse(status=200, text=json.dumps({"status": "Failed"}))
         elif url.endswith(
+            "https://testcontentunderstanding.cognitiveservices.azure.com/contentunderstanding/analyzers/canceledanalyzer/operations/7f313e00-4da1-4b19-a25e-53f121c24d10?api-version=2025-11-01"
+        ):
+            return MockResponse(status=200, text=json.dumps({"status": "Canceled"}))
+        elif url.endswith(
             "https://testcontentunderstanding.cognitiveservices.azure.com/contentunderstanding/analyzers/image_analyzer/operations/7f313e00-4da1-4b19-a25e-53f121c24d10?api-version=2025-11-01"
         ):
-            nonlocal num_poll_calls
             num_poll_calls += 1
-            if num_poll_calls == 1:
+            if num_poll_calls == 4:
+                return MockResponse(status=200, text=json.dumps({"status": "NotStarted"}))
+            if num_poll_calls == 5:
                 return MockResponse(status=200, text=json.dumps({"status": "Running"}))
-            elif num_poll_calls > 1:
-                return MockResponse(status=200, text=json.dumps({"status": "Succeeded"}))
+            return MockResponse(status=200, text=json.dumps({"status": "Succeeded"}))
         else:
             raise Exception("Unexpected URL for mock call to ClientSession.get()")
 
@@ -160,6 +178,12 @@ async def test_contentunderstanding_analyze(monkeypatch, caplog):
     )
     with pytest.raises(Exception):
         await describer_bad_analyze.describe_image(b"imagebytes")
+
+    describer_canceled_analyze = ContentUnderstandingDescriber(
+        endpoint="https://canceledanalyzer.cognitiveservices.azure.com", credential=MockAzureCredential()
+    )
+    with pytest.raises(Exception):
+        await describer_canceled_analyze.describe_image(b"imagebytes")
 
 
 class MockAsyncOpenAI:
